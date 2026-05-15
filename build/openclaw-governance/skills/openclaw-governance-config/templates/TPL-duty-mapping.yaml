@@ -1,0 +1,44 @@
+# Agent 职责映射模板
+# 复制至 ${OPENCLAW_LOCAL_WORKSPACE}/.system/governance/current/config/duty-mapping.yaml
+
+version: "2.0"
+
+agents:
+  # =====================
+  # L1 系统级（会话启动时加载）
+  # =====================
+  main:
+    agent_id: main
+    duty: 首席幕僚长
+    name: 银月
+    role: 流程中枢
+    capabilities:
+      - dispatch
+      - delegation
+      - task
+      - heartbeat
+    level: L1
+    is_system: true  # 系统级 Agent，不可删除
+
+  # =====================
+  # 扩展 Agent（按需添加）
+  # =====================
+  # cto:
+  #   agent_id: cto
+  #   duty: 首席技术官
+  #   name: ...
+  #   role: CTO
+  #   level: L3
+  #   is_system: false
+
+# ============================================
+# 特殊标识
+# ============================================
+special:
+  human:
+    id: harold  # 修改为实际 human ID
+    name: ...
+    title: 董事长/Chairman
+  system:
+    id: system
+    name: OpenClaw 系统

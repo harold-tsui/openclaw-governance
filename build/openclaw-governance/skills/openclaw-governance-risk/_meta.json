@@ -1,0 +1,17 @@
+{
+  "owner": "openclaw-governance",
+  "slug": "openclaw-governance-risk",
+  "displayName": "openclaw-governance-risk",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1742688000000,
+    "commit": ""
+  },
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1742688000000,
+      "changes": "初始版本：风险管理能力（风险识别、分析、应对、监控）"
+    }
+  ]
+}

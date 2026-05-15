@@ -1,0 +1,5 @@
+# 用户级任务模板
+# 复制至 ${OPENCLAW_LOCAL_WORKSPACE}/.system/governance/current/config/user/user-tasks.yaml
+
+version: "1.0"
+tasks: []

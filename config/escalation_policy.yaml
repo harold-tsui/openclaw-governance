@@ -1,0 +1,98 @@
+# Escalation Policy Configuration - 升级策略配置
+# 依据：ARCH v1.4.3 §2.1.1 + §4.3
+# 创建：2026-04-06
+
+# 默认升级策略
+default_policy:
+  # 超时时间（工作时间）
+  timeout: "2 business days"
+  
+  # 最大提醒次数
+  max_reminders: 3
+  
+  # 提醒间隔（工作时间）
+  reminder_interval: "4 business hours"
+  
+  # 自动降级超时（当 human_review 超时后）
+  auto_downgrade_timeout: "3 business days"
+  auto_downgrade_verdict: "partial"
+
+# 升级级别定义
+escalation_levels:
+  - level: 1
+    name: "first_reminder"
+    trigger: "timeout"
+    action: "send_reminder"
+    message_template: "请审批任务 {task_id}，已等待 {elapsed_time}"
+    
+  - level: 2
+    name: "second_reminder"
+    trigger: "reminder_timeout"
+    action: "send_reminder"
+    message_template: "【再次提醒】请审批任务 {task_id}，已等待 {elapsed_time}"
+    
+  - level: 3
+    name: "manager_escalation"
+    trigger: "max_reminders_exceeded"
+    action: "escalate_to_manager"
+    message_template: "任务 {task_id} 长期未响应，已升级至管理层"
+    
+  - level: 4
+    name: "auto_close"
+    trigger: "escalation_timeout"
+    action: "auto_downgrade"
+    verdict: "partial"
+    message_template: "任务 {task_id} 超时未响应，自动降级为 partial"
+
+# 通知渠道配置
+notification_channels:
+  - type: "feishu"
+    enabled: true
+    # 飞书消息配置
+    config:
+      # 消息模板
+      message_type: "interactive"
+      # 是否@相关人员
+      mention_user: true
+      # 是否使用卡片消息
+      use_card: true
+      
+  - type: "log"
+    enabled: true
+    config:
+      log_path: "logs/escalation.jsonl"
+
+# 级别对应的 reviewer 映射
+reviewer_mapping:
+  L0:
+    required: false
+    reviewer: null
+    escalation_enabled: false
+    
+  L1:
+    required: false
+    reviewer: null
+    escalation_enabled: false
+    
+  L2:
+    required: true
+    reviewer: "yin-yue"
+    escalation_enabled: true
+    escalation_target: "harold"
+    
+  L3:
+    required: true
+    reviewer: "harold"
+    escalation_enabled: true
+    escalation_target: "harold"  # L3 已经是最高，不需要再升级
+
+# 审批窗口配置
+review_windows:
+  # 工作时间内审批窗口
+  work_hours:
+    start: "09:00"
+    end: "18:00"
+    
+  # 非工作时间审批窗口（更宽松）
+  non_work_hours:
+    multiplier: 2  # 超时时间翻倍

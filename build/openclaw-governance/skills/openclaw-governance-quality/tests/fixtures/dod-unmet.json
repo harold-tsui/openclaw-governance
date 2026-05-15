@@ -1,0 +1,23 @@
+{
+  "task_id": "TEST-003",
+  "version": "1.0",
+  "created_by": "coo",
+  "created_at": "2026-03-23T12:00:00+08:00",
+  "locked": true,
+  "criteria": [
+    {
+      "id": "DOD-1",
+      "category": "functional",
+      "description": "已满足",
+      "required": true,
+      "met": true
+    },
+    {
+      "id": "DOD-2",
+      "category": "documentation",
+      "description": "未满足",
+      "required": true,
+      "met": false
+    }
+  ]
+}

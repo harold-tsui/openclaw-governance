@@ -1,0 +1,31 @@
+{
+  "owner": "openclaw-governance",
+  "slug": "openclaw-governance-agent",
+  "displayName": "openclaw-governance-agent",
+  "latest": {
+    "version": "1.1.0",
+    "publishedAt": 1744070400000,
+    "commit": ""
+  },
+  "templates": {
+    "dir": "templates",
+    "onboarding_task_card": "templates/TMPL-ONBOARDING-TASK-CARD.md",
+    "training_report": "templates/TMPL-TRAINING-REPORT.md",
+    "promotion_report": "templates/TMPL-PROMOTION-REPORT.md",
+    "transfer_report": "templates/TMPL-TRANSFER-REPORT.md",
+    "demotion_report": "templates/TMPL-DEMOTION-REPORT.md",
+    "retirement_report": "templates/TMPL-RETIREMENT-REPORT.md"
+  },
+  "history": [
+    {
+      "version": "1.1.0",
+      "publishedAt": 1744070400000,
+      "changes": "完善 Agent 生命周期 SOP"
+    },
+    {
+      "version": "1.0.0",
+      "publishedAt": 1711238400000,
+      "changes": "初始版本"
+    }
+  ]
+}

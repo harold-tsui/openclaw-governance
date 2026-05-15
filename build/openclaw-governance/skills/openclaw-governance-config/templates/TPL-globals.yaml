@@ -1,0 +1,62 @@
+# OpenClaw 全局配置模板
+# 复制至 ${OPENCLAW_LOCAL_WORKSPACE}/.system/governance/current/config/globals.yaml
+# 按需修改 environment.workspace 等值
+
+version: "1.0"
+
+# ============================================
+# 1. 环境配置
+# ============================================
+environment:
+  workspace: ~/Workspaces/openclaw/main  # 修改为实际工作空间路径
+  workspace_system: .system/governance/current
+  data_root: ~/.openclaw
+  log_level: info
+  log_path: ~/.openclaw/logs
+  timezone: Asia/Shanghai  # 修改为实际时区
+
+# ============================================
+# 2. Persona 定义
+# ============================================
+persona:
+  human:
+    id: chairman
+    alias: ["chairman"]  # 修改为实际人类用户 alias
+  default:
+    _path: .system/governance/current/config/system/agents.yaml
+  user:
+    _path: .system/governance/current/config/user/persons.yaml
+
+# ============================================
+# 3. 系统 Skills
+# ============================================
+system_skills:
+  required:
+    - openclaw-governance-core
+    - openclaw-governance-dispatch
+    - openclaw-governance-data
+    - openclaw-governance-delegation
+  on_demand:
+    - openclaw-governance-task
+    - openclaw-governance-heartbeat
+    - openclaw-governance-hierarchy
+    - openclaw-governance-quality
+  extensible: []  # 按需扩展
+
+# ============================================
+# 4. 项目配置
+# ============================================
+projects:
+  system_defaults:
+    _path: ${OPENCLAW_GOV_PATH}/config/system/system-projects.yaml
+  extensions:
+    _path: ${OPENCLAW_GOV_PATH}/config/user/user-projects.yaml
+
+# ============================================
+# 5. 系统 Task
+# ============================================
+system_tasks:
+  defaults:
+    _path: ${OPENCLAW_GOV_PATH}/config/system/system-tasks.yaml
+  extensions:
+    _path: ${OPENCLAW_GOV_PATH}/config/user/user-tasks.yaml

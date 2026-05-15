@@ -1,0 +1,5 @@
+# 系统级主题模板
+# 复制至 ${OPENCLAW_LOCAL_WORKSPACE}/.system/governance/current/config/system/system-topics.yaml
+
+version: "1.0"
+topics: []

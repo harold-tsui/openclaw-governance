@@ -1,0 +1,18 @@
+# Agent 配置模板 - 系统级
+# 复制至 ${OPENCLAW_LOCAL_WORKSPACE}/.system/governance/current/config/system/agents.yaml
+# 判定标准：支撑 OpenClaw 体系基础运行的 Agent
+
+version: "3.0"
+
+system_agents:
+  main:
+    agent_id: main
+    duty: 首席幕僚长
+    role: 流程中枢
+    capabilities:
+      - dispatch
+      - delegation
+      - task
+      - heartbeat
+    level: L1
+    is_system: true

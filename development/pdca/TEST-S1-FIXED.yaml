@@ -1,0 +1,37 @@
+cycles:
+- a:
+    lessons: []
+    next_task: TEST-S2
+    summary: 功能 X 完成
+    timestamp: '2026-04-16T15:23:32.449015+00:00'
+  c:
+    audit_eligible: true
+    audit_result:
+      has_problem: false
+      issues: []
+      score: 90
+      timestamp: '2026-04-16T15:25:37.460117+00:00'
+    evidence:
+    - '标准A: 通过'
+    - '标准B: 通过'
+    review_level: L1
+    timestamp: '2026-04-16T15:23:32.447831+00:00'
+    verdict: pass
+  completed_at: '2026-04-16T15:23:32.449018+00:00'
+  cycle_index: 1
+  d:
+    blocker: null
+    status: completed
+    summary: 完成功能 X，修改了 foo.py
+    timestamp: '2026-04-16T15:23:32.446815+00:00'
+  p:
+    acceptance_criteria:
+    - 测试通过
+    - 文档更新
+    dl_refs: []
+    summary: 实现功能 X
+    timestamp: '2026-04-16T15:23:32.445634+00:00'
+  phase: completed
+  started_at: '2026-04-16T15:23:32.445475+00:00'
+task_card_id: TEST-S1-FIXED
+task_card_path: null

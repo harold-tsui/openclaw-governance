@@ -1,0 +1,55 @@
+# 状态同步规则配置
+
+# 同步触发条件
+sync_triggers:
+  task_complete:
+    files: [task-card, topic-brief, mission-board]
+    condition: "check.verdict in ['pass', 'fail']"
+    priority: P0
+    
+  topic_complete:
+    files: [topic-brief, project-charter]
+    condition: "topic.all_tasks_complete"
+    priority: P1
+    
+  phase_complete:
+    files: [project-charter, mission-board]
+    condition: "phase.all_topics_complete"
+    priority: P1
+
+# 文件路径模板
+file_paths:
+  task-card: "${PROJECT_DIR}/tasks/${TASK_ID}_TASK-CARD.md"
+  topic-brief: "${PROJECT_DIR}/topics/${TOPIC_ID}/TOPIC-BRIEF.md"
+  project-charter: "${PROJECT_DIR}/PROJECT-CHARTER.md"
+  mission-board: "${AGENT_DIR}/MISSION_BOARD.md"
+
+# Task ID → Topic ID 映射
+task_topic_mapping:
+  "T0.*": "N4-P0-T01"
+  "T1.*": "N4-P1-T01"
+  "T2.*": "N4-P1-T02"
+  "T3.*": "N4-P1-T03"
+  "T4.*": "N4-P1-T04"
+  "T5.*": "N4-P1-T05"
+  "Phase1-Improvement-*": "N4-P1-T05-Improvement"
+  "N4-P2-T01-*": "N4-P2-T01"
+
+# 状态值映射
+status_mapping:
+  pass: "✅ 已完成"
+  fail: "❌ 失败"
+  pending: "📋 待开始"
+  in_progress: "🔄 进行中"
+
+# 错误处理
+error_handling:
+  file_not_found: "warn"  # 文件未找到时仅警告
+  parse_error: "error"    # 解析错误时记录
+  write_error: "retry"    # 写入错误时重试 3 次
+
+# 性能配置
+performance:
+  batch_update: false     # 不批量更新（逐个文件）
+  max_retries: 3          # 最大重试次数
+  timeout_seconds: 5      # 单个文件更新超时

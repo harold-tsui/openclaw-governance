@@ -1,0 +1,60 @@
+# TMPL-REGISTRY-TASK.yaml
+# Task 注册表模板
+# 用途：.system/master_data/tasks.yaml
+# 更新规则：每次 Task 创建/状态变更时更新
+
+version: "1.0"
+schema: "registry"
+type: "task"
+updated_at: "2026-03-17"
+
+# 任务列表
+tasks:
+  - # ===== 必填字段 =====
+    id: ""                    # 唯一标识，如 ZT-P009-TP01-T001
+    
+    # ===== 基本信息 =====
+    name: ""                  # 任务名称
+    description: ""           # 任务描述（可选）
+    
+    # ===== 关联关系 =====
+    project_id: ""            # 所属 Project ID
+    topic_id: ""             # 所属 Topic ID
+    topic_name: ""           # 所属 Topic 名称
+    
+    # ===== 负责人 =====
+    task_pm: ""              # Task 负责人 agentId
+    
+    # ===== 状态与级别 =====
+    status: ""                # pending | in_progress | pending_review | done | blocked
+    priority: ""             # P0 | P1 | P2 | P3
+    review_level: ""         # L1 | L2 | L3
+    
+    # ===== 交付物 =====
+    deliverable_path: ""      # 交付物路径
+    deliverable_name: ""      # 交付物名称
+    deliverable_status: ""    # pending | done | approved
+    
+    # ===== 时间信息 =====
+    start_date: ""            # 开始日期 YYYY-MM-DD（可选）
+    due_date: ""             # 截止日期 YYYY-MM-DD（可选）
+    completed_at: ""          # 完成时间 ISO8601（可选）
+    
+    # ===== 分类信息 =====
+    task_type: ""             # 常规 | 周期性 | 应急 | 一次性
+    tags: []                 # 标签
+    
+    # ===== 输入来源 =====
+    input_refs: []            # 上游交付物引用
+    
+    # ===== 元数据（自动生成）=====
+    source: ""                # 数据来源：manual | task-card | system
+    source_ref: ""           # 来源引用，如 TASK-CARD.md 路径
+    created_at: ""           # 创建时间 ISO8601
+    updated_at: ""           # 更新时间 ISO8601
+    created_by: ""           # 创建者 agentId
+    
+    # ===== 评审信息 =====
+    review_status: ""         # pending | approved | rejected | changes_requested
+    review_by: ""            # 评审人（Harold 或银月）
+    review_at: ""            # 评审时间（可选）

@@ -1,0 +1,86 @@
+cycles:
+- a:
+    lessons:
+    - 需要调整方案
+    next_task: TEST-S3-FAIL
+    summary: 重新规划
+    timestamp: '2026-04-16T15:33:11.526600+00:00'
+  c:
+    audit_eligible: false
+    audit_result: null
+    evidence:
+    - 未达到验收标准
+    review_level: L1
+    timestamp: '2026-04-16T15:33:11.525507+00:00'
+    verdict: fail
+  completed_at: '2026-04-16T15:33:11.526602+00:00'
+  cycle_index: 1
+  d:
+    blocker: null
+    status: partial
+    summary: 执行失败
+    timestamp: '2026-04-16T15:33:11.524566+00:00'
+  p:
+    acceptance_criteria: []
+    dl_refs: []
+    summary: 持续收敛任务
+    timestamp: '2026-04-16T15:33:11.523487+00:00'
+  phase: completed
+  started_at: '2026-04-16T15:33:11.523338+00:00'
+- a:
+    lessons: []
+    next_task: TEST-S3-FAIL
+    summary: 继续迭代
+    timestamp: '2026-04-16T15:33:11.533208+00:00'
+  c:
+    audit_eligible: false
+    audit_result: null
+    evidence:
+    - 部分通过
+    review_level: L1
+    timestamp: '2026-04-16T15:33:11.531234+00:00'
+    verdict: partial
+  completed_at: '2026-04-16T15:33:11.533211+00:00'
+  cycle_index: 2
+  d:
+    blocker: null
+    status: partial
+    summary: 部分完成
+    timestamp: '2026-04-16T15:33:11.529475+00:00'
+  p:
+    acceptance_criteria:
+    - 修正后的标准
+    dl_refs: []
+    summary: 调整后的方案
+    timestamp: '2026-04-16T15:33:11.527830+00:00'
+  phase: completed
+  started_at: '2026-04-16T15:33:11.527828+00:00'
+- a:
+    lessons: []
+    next_task: null
+    summary: 任务完成
+    timestamp: '2026-04-16T15:33:11.542260+00:00'
+  c:
+    audit_eligible: true
+    audit_result: null
+    evidence:
+    - 全部通过
+    review_level: L1
+    timestamp: '2026-04-16T15:33:11.539670+00:00'
+    verdict: pass
+  completed_at: '2026-04-16T15:33:11.542262+00:00'
+  cycle_index: 3
+  d:
+    blocker: null
+    status: completed
+    summary: 完成
+    timestamp: '2026-04-16T15:33:11.537311+00:00'
+  p:
+    acceptance_criteria: []
+    dl_refs: []
+    summary: 最终方案
+    timestamp: '2026-04-16T15:33:11.535105+00:00'
+  phase: completed
+  started_at: '2026-04-16T15:33:11.535103+00:00'
+task_card_id: TEST-S3-FAIL
+task_card_path: null

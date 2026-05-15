@@ -1,0 +1,70 @@
+{
+  "owner": "openclaw-governance",
+  "slug": "openclaw-governance-nucleus",
+  "displayName": "openclaw-governance-nucleus",
+  "latest": {
+    "version": "2.5.0",
+    "publishedAt": 1745020800000,
+    "commit": ""
+  },
+  "scripts": [
+    "scripts/pdca.py"
+  ],
+  "history": [
+    {
+      "version": "2.5.0",
+      "publishedAt": 1745020800000,
+      "changes": "逻辑修复（6 项）：Act --task-state 双状态桥接；Step 1 含 [V] 任务；阻塞冷却；Plan 条件强制 P2；task_card_path 持久化 P3；审计出口文档"
+    },
+    {
+      "version": "2.4.0",
+      "publishedAt": 1745020800000,
+      "changes": "逻辑修复：删除 nucleus_scheduler.py 幽灵引用；pdca.py --level 必填；get_pending() 区分 L2/L3；新增 get_history() API"
+    },
+    {
+      "version": "2.3.0",
+      "publishedAt": 1744934400000,
+      "changes": "审计出口文档化 — CLI 参考新增 audit-queue / mark-audit / --dl-refs；四份项目文档生成"
+    },
+    {
+      "version": "2.2.0",
+      "publishedAt": 1744934400000,
+      "changes": "架构澄清：移除 Act 阶段 LL/DL 触发；移除 Step 2.5 知识预加载；dependencies 去掉 governance-knowledge"
+    },
+    {
+      "version": "2.1.0",
+      "publishedAt": 1744934400000,
+      "changes": "接入 Human-in-the-Loop — Check 引用 delegation §10.2；Act 新增知识沉淀触发规则"
+    },
+    {
+      "version": "2.0.0",
+      "publishedAt": 1744934400000,
+      "changes": "架构重写：单文件 pdca.py 替代旧 modules/+core/ 系统；引入 harness engineering 概念"
+    },
+    {
+      "version": "1.4.0",
+      "publishedAt": 1744934400000,
+      "changes": "全链路逻辑修复（10 处不自洽）"
+    },
+    {
+      "version": "1.3.0",
+      "publishedAt": 1744070400000,
+      "changes": "Python 文件迁移至 Skill 目录"
+    },
+    {
+      "version": "1.2.0",
+      "publishedAt": 1744070400000,
+      "changes": "level: L1-meta-sub → L4；移除自造字段 standalone/parent_skill"
+    },
+    {
+      "version": "1.1.0",
+      "publishedAt": 1744070400000,
+      "changes": "level L3→L1-meta-sub；Activate 条件修正；补充定位/职责边界/双路径"
+    },
+    {
+      "version": "1.0.0",
+      "publishedAt": 1743897600000,
+      "changes": "初始版本，Phase 1 MVP 完成"
+    }
+  ]
+}

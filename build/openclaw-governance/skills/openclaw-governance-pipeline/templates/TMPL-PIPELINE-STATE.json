@@ -1,0 +1,68 @@
+{
+  "pipeline_id": "PL-{TASK_ID}",
+  "task_id": "{TASK_ID}",
+  "weight": "Medium",
+  "automation_level": "L3",
+  "created_at": "{TIMESTAMP}",
+  "updated_at": "{TIMESTAMP}",
+  "current_step": "triage",
+  "steps": [
+    {
+      "id": "triage",
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "output": null
+    },
+    {
+      "id": "checkpoint",
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "output": null
+    },
+    {
+      "id": "context",
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "output": null
+    },
+    {
+      "id": "audit",
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "output": null
+    },
+    {
+      "id": "approve",
+      "status": "pending",
+      "auto": false,
+      "started_at": null,
+      "completed_at": null,
+      "output": null
+    },
+    {
+      "id": "execute",
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "output": null
+    },
+    {
+      "id": "review_gate",
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "output": null
+    },
+    {
+      "id": "complete",
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "output": null
+    }
+  ]
+}

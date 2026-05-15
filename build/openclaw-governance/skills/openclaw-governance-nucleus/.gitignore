@@ -1,0 +1,19 @@
+# Runtime data (PDCA records — created dynamically)
+pdca/*.yaml
+!pdca/_state.yaml
+
+# Logs
+logs/
+
+# Config (runtime, not source)
+config/
+
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/
+*.pyo
+
+# Coverage reports
+.coverage
+htmlcov/

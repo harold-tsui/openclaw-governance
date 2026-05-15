@@ -1,0 +1,81 @@
+{
+  "version": "1.0.0",
+  "updated_at": "2026-04-15",
+  "description": "Dispatch 状态模板，用于引导机制和显式声明",
+  "source_skill": "governance-dispatch",
+  
+  "guidance_state": {
+    "current_guidance_type": null,
+    "current_guidance_stage": null,
+    "last_guidance_time": null,
+    "guidance_history": []
+  },
+  
+  "explicit_declaration": {
+    "last_user_declaration": null,
+    "parsed_object_type": null,
+    "parsed_object_id": null,
+    "parsed_object_full_name": null,
+    "parsed_action": null,
+    "declaration_time": null,
+    
+    "agent_response": null,
+    "agent_response_time": null,
+    
+    "user_correction": null,
+    "user_correction_time": null
+  },
+  
+  "project_creation": {
+    "proposed_project_name": null,
+    "approval_status": "pending",
+    "proposal_document_path": null
+  },
+  
+  "blocked_handling": {
+    "blocked_task_id": null,
+    "blocked_reason": null,
+    "blocked_severity": null,
+    "harold_choice": null,
+    "blocked_time": null
+  },
+  
+  "monitoring_state": {
+    "query_scope": null,
+    "target_project": null,
+    "target_task": null,
+    "query_time": null
+  },
+  
+  "decision_state": {
+    "decision_type": null,
+    "target_project": null,
+    "decision_reason": null,
+    "decision_time": null
+  },
+  
+  "emergency_state": {
+    "emergency_type": null,
+    "priority": null,
+    "emergency_time": null,
+    "handled": false
+  },
+  
+  "session_state": {
+    "intent_type": null,
+    "active_task": null,
+    "active_project": null,
+    "loaded_skills": []
+  },
+  
+  "user_preferences": {
+    "last_choice": null,
+    "choice_history": []
+  },
+  
+  "metadata": {
+    "agent_id": "${AGENT_ID}",
+    "workspace": "${OPENCLAW_LOCAL_WORKSPACE}",
+    "created_at": "2026-04-15T17:00:00+08:00"
+  }
+}

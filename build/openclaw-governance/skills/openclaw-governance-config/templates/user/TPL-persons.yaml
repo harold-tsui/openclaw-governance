@@ -1,0 +1,10 @@
+# 人员信息模板
+# 复制至 ${OPENCLAW_LOCAL_WORKSPACE}/.system/governance/current/config/user/persons.yaml
+
+version: "1.0"
+
+persons:
+  # human:
+  #   id: harold
+  #   name: ...
+  #   title: ...

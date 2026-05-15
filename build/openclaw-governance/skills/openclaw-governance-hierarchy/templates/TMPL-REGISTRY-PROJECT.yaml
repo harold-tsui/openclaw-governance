@@ -1,0 +1,45 @@
+# TMPL-REGISTRY-PROJECT.yaml
+# Project 注册表模板
+# 用途：
+#   - 用户级项目：.system/governance/current/config/user/user-projects.yaml
+#   - 系统级项目：.system/governance/current/config/system/system-projects.yaml
+# 更新规则：每次 Project 创建/变更时更新
+
+version: "1.0"
+schema: "registry"
+type: "project"
+updated_at: "2026-03-17"
+
+# 项目列表
+projects:
+  - # ===== 必填字段 =====
+    id: ""                    # 唯一标识，如 ZT-P010
+    
+    # ===== 基本信息 =====
+    name: ""                  # 项目名称
+    description: ""            # 项目描述
+    status: ""                # active | paused | done | archived
+    
+    # ===== 负责人 =====
+    owner: ""                 # 项目负责人 agentId
+    members: []               # 成员列表  agentId 数组
+    
+    # ===== 时间信息 =====
+    start_date: ""            # 开始日期 YYYY-MM-DD
+    end_date: ""              # 结束日期 YYYY-MM-DD（可选）
+    
+    # ===== 分类信息 =====
+    privacy_level: ""         # P1 | P2 | P3
+    tags: []                  # 标签
+    
+    # ===== 元数据（自动生成）=====
+    source: ""                # 数据来源：manual | task-card | system
+    source_ref: ""            # 来源引用，如 TASK-CARD 路径
+    created_at: ""             # 创建时间 ISO8601
+    updated_at: ""            # 更新时间 ISO8601
+    created_by: ""            # 创建者 agentId
+    
+    # ===== 关联信息 =====
+    charter_path: ""          # PROJECT-CHARTER.md 路径
+    topics_count: 0           # Topic 数量
+    tasks_count: 0             # Task 数量

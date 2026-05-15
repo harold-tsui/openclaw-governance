@@ -1,0 +1,62 @@
+{
+  "owner": "openclaw-governance",
+  "slug": "openclaw-governance-dispatch",
+  "displayName": "openclaw-governance-dispatch",
+  "latest": {
+    "version": "2.11.0",
+    "publishedAt": 1744070400000,
+    "commit": ""
+  },
+  "history": [
+    {
+      "version": "2.11.0",
+      "publishedAt": 1744070400000,
+      "changes": "§三.3 异常处理改为引导选择 + 显式声明"
+    },
+    {
+      "version": "2.10.0",
+      "publishedAt": 1744070400000,
+      "changes": "移除 infra_check 意图路由，nucleus/evolution/infrastructure/pipeline 统一归为 L4"
+    },
+    {
+      "version": "2.9.0",
+      "publishedAt": 1744070400000,
+      "changes": "补充元治理层（evolution 独立分类）+ nucleus L4-sub"
+    },
+    {
+      "version": "2.8.0",
+      "publishedAt": 1744070400000,
+      "changes": "配置文件名修正，重复编号修复，意图映射表补充 4 个 Skill"
+    },
+    {
+      "version": "2.7.0",
+      "publishedAt": 1743984000000,
+      "changes": "新增核心定义（Task/Topic/Project）、Task 判断标准"
+    },
+    {
+      "version": "2.6.0",
+      "publishedAt": 1743552000000,
+      "changes": "补充缓存检查、异常处理"
+    },
+    {
+      "version": "2.5.0",
+      "publishedAt": 1743552000000,
+      "changes": "§二+§三合并，§六精简"
+    },
+    {
+      "version": "2.4.0",
+      "publishedAt": 1743552000000,
+      "changes": "权限规则移入 governance-delegation"
+    },
+    {
+      "version": "2.3.0",
+      "publishedAt": 1742774400000,
+      "changes": "新增显式 Dispatch 触发加载规则"
+    },
+    {
+      "version": "2.0.0",
+      "publishedAt": 1742083200000,
+      "changes": "初始版本"
+    }
+  ]
+}

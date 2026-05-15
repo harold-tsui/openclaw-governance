@@ -1,0 +1,23 @@
+{
+  "owner": "openclaw-governance",
+  "slug": "openclaw-governance-incident",
+  "displayName": "openclaw-governance-incident",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1742774400000,
+    "commit": ""
+  },
+  "templates": {
+    "dir": "templates",
+    "incident_report": "templates/TMPL-INCIDENT-REPORT.md",
+    "incident_timeline": "templates/TMPL-INCIDENT-TIMELINE.md",
+    "postmortem": "templates/TMPL-POSTMORTEM.md"
+  },
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1742774400000,
+      "changes": "初始版本"
+    }
+  ]
+}

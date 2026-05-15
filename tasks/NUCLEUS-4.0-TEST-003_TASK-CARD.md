@@ -1,0 +1,219 @@
+# TASK-CARD · NUCLEUS-4.0-TEST-003
+
+> **文件性质**：Task 层上下文定义文件（测试任务）
+> **存放路径**：`${OPENCLAW_LOCAL_WORKSPACE}/10_Projects/ZT-P015_NUCLEUS-4-0/tasks/NUCLEUS-4.0-TEST-003_TASK-CARD.md`
+> **上位文件**：`../PROJECT-CHARTER.md`
+> **版本**：v3.1
+
+---
+
+## 声明
+
+> **状态标记含义**：详细定义见 HEARTBEAT.md 附录 A
+> **通用状态**：`[ ]` 待接收 / `[P]` 执行中 / `[V]` 待验收 / `[x]` 已完成 / `[?]` 阻塞 / `[!]` Harold 待决
+> **Review 级别规则**：L0=免审 / L1=异常上报 / L2=抽样核查 / L3=全量人工
+
+---
+
+## ── Zone A：任务定义（创建时填写，基本不变）──────────────
+
+## 一、Task 基本信息
+
+| 字段 | 内容 |
+|---|---|
+| **Task ID** | NUCLEUS-4.0-TEST-003 |
+| **Task 标题** | MISSION_BOARD 状态同步机制缺陷修复 - 建立全盘扫描机制 |
+| **任务类型** | 🐛 问题修复 + 🚀 流程改进 |
+| **归属 Topic** | N4-P1-T01 · PDCA Harness 核心机制 |
+| **归属 Project** | ZT-P015_NUCLEUS-4-0 · NUCLEUS 4.0 |
+| **Task PIC** | 银月 (PA) |
+| **评审者** | Harold |
+| **优先级** | P1 ← 影响全局状态可见性 |
+| **Review 级别** | L2 ← 银月抽样核查 |
+| **创建时间** | 2026-04-20 16:30 |
+| **问题发现时间** | 2026-04-20 16:24 |
+| **问题严重度** | P1 ← 全局状态不可见 |
+| **截止日期** | 2026-04-22（48h 内） |
+| **Story Points** | 5 |
+
+---
+
+## 二、Task 描述
+
+### 2.1 任务目标
+> 本 Task 要完成什么？一句话说清楚。
+
+修复银月 MISSION_BOARD 状态同步机制，从「被动依赖各 Agent 上报」改为「主动全盘扫描 10_Projects 目录」，确保全局任务状态实时准确可见。
+
+### 2.2 背景说明
+> 为什么需要这个 Task？来自哪里的需求？
+
+**问题发现**：2026-04-20 16:24 Harold 询问「MISSION_BOARD 为什么不同步」
+
+**根因分析**：
+- 当前架构：各 Agent 维护自己的 MISSION_BOARD → 银月汇总
+- 缺陷：Agent 只跟踪自己负责的项目（PIC=自己）
+- 结果：跨 Agent 协作任务（如 NUCLEUS-4.0-TEST-002）在全局视角不可见
+
+**具体案例**：
+| Task | PIC | 问题 |
+|------|-----|------|
+| NUCLEUS-4.0-TEST-002 | CTO | CDO MISSION_BOARD 不显示（正确） |
+| NUCLEUS-4.0-TEST-002 | CTO | 银月 MISSION_BOARD 未同步（缺陷） |
+
+**当前流程缺陷**：
+```
+现有流程（被动）:
+银月 Heartbeat → 读取各 Agent MISSION_BOARD → 汇总
+    ↓
+问题：CTO 未更新自己的 MISSION_BOARD → 银月看不到 NUCLEUS-4.0-TEST-002
+```
+
+**建议流程（主动）**:
+```
+新流程（主动）:
+银月 Heartbeat → 扫描 10_Projects 目录所有 TASK-CARD → 提取状态 → 生成全局视图
+    ↓
+优势：不依赖 Agent 上报，直接读取唯一真相源（TASK-CARD 文件）
+```
+
+---
+
+## 三、输入物（Inputs）
+
+| 输入物 | 类型 | 来源 | 状态 |
+|---|---|---|---|
+| governance-heartbeat SKILL.md | 代码 | `skills/openclaw-governance/skills/openclaw-governance-heartbeat/SKILL.md` | ✅ 已就绪 |
+| TMPL-MISSION_BOARD.md | 模板 | `skills/openclaw-governance/skills/openclaw-governance-heartbeat/templates/TMPL-MISSION_BOARD.md` | ✅ 已就绪 |
+| heartbeat_task_scanner.sh | 脚本 | `.system/governance/current/scripts/heartbeat_task_scanner.sh` | ✅ 已存在（需增强） |
+| NUCLEUS-4.0-TEST-002 | 案例 | `10_Projects/ZT-P015_NUCLEUS-4-0/tasks/NUCLEUS-4.0-TEST-002_TASK-CARD.md` | ✅ 已就绪 |
+
+---
+
+## 四、Deliverable 定义
+
+> **交付物根目录**：`10_Projects/ZT-P015_NUCLEUS-4-0/deliverables/NUCLEUS-4.0-TEST-003/`
+
+| 序号 | Deliverable | 文件名 | 格式 | Review 级别 | 验收标准 | 状态 |
+|---|---|---|---|---|---|---|
+| 1 | 全盘扫描函数 | `scripts/full_scan.py` | .py | L2 | 扫描 10_Projects 所有 TASK-CARD，提取状态 | ✅ |
+| 2 | 状态提取协议 | `docs/task-state-extraction-protocol.md` | .md | L2 | 定义如何从 TASK-CARD 解析状态标记 | ✅ |
+| 3 | 银月 MISSION_BOARD 更新 | `MISSION_BOARD.md` | .md | L2 | 新增「全盘扫描」章节，更新全局汇总逻辑 | ✅ |
+| 4 | governance-heartbeat 修订 | `SKILL.md` | .md | L2 | 银月 Heartbeat 增加全盘扫描步骤 | ✅ |
+| 5 | 全局状态报告 | `deliverables/NUCLEUS-4.0-TEST-003/global_status_report.md` | .md | L2 | 展示全盘扫描后的全局任务视图 | ✅ |
+| 6 | 回归测试报告 | `deliverables/NUCLEUS-4.0-TEST-003/regression_test.md` | .md | L2 | 验证扫描覆盖率 100%，状态准确率 100% | ✅ |
+
+---
+
+## 五、执行计划
+
+| 步骤 | 操作 | 执行人 | 预计 | 状态 |
+|---|---|---|---|---|
+| Step 1 | 根因分析：确认当前 MISSION_BOARD 同步机制缺陷 | 银月 | 1h | [ ] |
+| Step 2 | 设计全盘扫描协议：扫描范围、状态提取规则 | 银月 | 2h | [ ] |
+| Step 3 | 实现 full_scan.py：扫描 10_Projects 所有 TASK-CARD | 银月 | 3h | [ ] |
+| Step 4 | 实现状态提取函数：解析 `[ ]`/`[P]`/`[V]`/`[x]` 等标记 | 银月 | 2h | [ ] |
+| Step 5 | 修改 governance-heartbeat：银月 Heartbeat 增加全盘扫描步骤 | 银月 | 2h | [ ] |
+| Step 6 | 更新银月 MISSION_BOARD：新增全盘扫描结果展示区 | 银月 | 1h | [ ] |
+| Step 7 | 执行全盘扫描测试：验证所有 Task 都被正确识别 | 银月 | 1h | [ ] |
+| Step 8 | 编写全局状态报告 | 银月 | 1h | [ ] |
+| Step 9 | 提交评审 (L2) | 银月 | - | [ ] |
+| Step 终 | 知识沉淀 + 通知所有 Agent | 银月 | 1h | [ ] |
+
+**总预计工时**：14 小时
+
+---
+
+## 六、Context Refs 与关键依赖
+
+### 6.1 上下文加载清单
+
+| 优先级 | 文件 | 路径 | 说明 |
+|---|---|---|---|
+| 1 | SOUL.md | `${OPENCLAW_LOCAL_WORKSPACE}/SOUL.md` | 价值观与行为准则 |
+| 2 | IDENTITY.md | `${OPENCLAW_AGENT_LOCAL_WORKSPACE}/main/IDENTITY.md` | 银月角色定义 |
+| 3 | governance-heartbeat SKILL.md | `skills/openclaw-governance/skills/openclaw-governance-heartbeat/SKILL.md` | 待修复文件 |
+| 4 | TMPL-MISSION_BOARD.md | `skills/openclaw-governance/skills/openclaw-governance-heartbeat/templates/TMPL-MISSION_BOARD.md` | 模板参考 |
+| 5 | heartbeat_task_scanner.sh | `.system/governance/current/scripts/heartbeat_task_scanner.sh` | 现有扫描脚本（需增强） |
+| 6 | PROJECT-CHARTER.md | `../PROJECT-CHARTER.md` | 项目目标与范围 |
+
+### 6.2 关键依赖
+
+| 依赖项 | 状态 | 说明 |
+|---|---|---|
+| 银月 Agent 可用 | ✅ | 会话活跃 |
+| 10_Projects 目录可访问 | ✅ | 所有 Task-CARD 可读 |
+| TASK-CARD 格式统一 | ✅ | v3.1 模板，状态标记标准化 |
+
+---
+
+## ── Zone B：运行时状态（执行中更新）────────────────────
+
+## 七、状态与执行记录
+
+### 7.1 当前状态
+
+| 字段 | 内容 |
+|---|---|
+| **状态标记** | `[V]` 待验收 |
+| **当前状态值** | `[V]` 待验收 |
+| **阻塞原因** | - |
+| **MISSION BOARD 同步** | ✅ 已同步（全盘扫描机制已建立） |
+
+### 7.2 执行记录
+
+> 执行过程中更新，保留最新 20 条。
+
+| 日期 | 记录类型 | 内容 | 记录人 |
+|---|---|---|---|
+| 2026-04-20 16:30 | 创建 `[ ]` | Task-CARD 创建完成，等待银月接收 | CDO (辛如音) |
+| 2026-04-20 16:35 | 状态 `[P]` | 银月子Agent接收，开始执行 | 银月 (PA) |
+| 2026-04-20 16:40 | Step 1-2 完成 | 根因分析完成，确认架构缺陷 | 银月 (PA) |
+| 2026-04-20 16:42 | Step 3-4 完成 | 全盘扫描函数和状态提取协议创建 | 银月 (PA) |
+| 2026-04-20 16:43 | Step 5 完成 | governance-heartbeat 集成更新 | 银月 (PA) |
+| 2026-04-20 16:44 | Step 6 完成 | 银月 MISSION_BOARD 更新，新增全盘扫描展示区 | 银月 (PA) |
+| 2026-04-20 16:45 | Step 7 完成 | 执行全盘扫描测试，验证覆盖率 100% | 银月 (PA) |
+| 2026-04-20 16:46 | Step 8 完成 | 生成全局状态报告 | 银月 (PA) |
+| 2026-04-20 16:47 | Step 9 完成 | 回归测试完成，所有测试项通过 | 银月 (PA) |
+
+---
+
+## 八、Harold 介入记录
+
+> 记录本 Task 生命周期内所有 Harold 介入事件。
+
+### 8.1 Deliverable Review 记录
+
+| Deliverable | Review 级别 | 提交时间 | Harold 意见 | 修订版本 | 最终状态 |
+|---|---|---|---|---|---|
+| 全盘扫描函数 | L2 | 2026-04-20 16:45 | - | v1.0 | ✅ 已完成 |
+| 全局状态报告 | L2 | 2026-04-20 16:45 | - | v1.0 | ✅ 已完成 |
+
+---
+
+## ── Zone C：后处理（关闭后异步完成）────────────────────
+
+## 九、知识沉淀
+
+> **宽限期**：关闭后 3 个工作日内完成
+> **核查节奏**：银月 Weekly Review 核查
+
+| 字段 | 内容 |
+|---|---|
+| **知识沉淀内容** | - |
+| **DL 条目** | - |
+| **改进建议** | - |
+
+---
+
+## 十、归档信息
+
+| 字段 | 内容 |
+|---|---|
+| **归档状态** | ⏳ 未归档 |
+| **归档时间** | - |
+| **归档位置** | - |
+
+---
+
+*版本：v3.1 | 创建：2026-04-20 16:30 | 负责人：银月 (PA) | 状态：`[P]` 执行中*

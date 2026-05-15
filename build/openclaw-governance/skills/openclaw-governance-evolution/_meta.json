@@ -1,0 +1,33 @@
+{
+  "owner": "openclaw-governance",
+  "slug": "openclaw-governance-evolution",
+  "displayName": "openclaw-governance-evolution",
+  "latest": {
+    "version": "1.2.0",
+    "publishedAt": 1744070400000,
+    "commit": ""
+  },
+  "dependencies": [
+    "openclaw-governance-core",
+    "openclaw-governance-hierarchy",
+    "openclaw-governance-quality",
+    "openclaw-governance-config"
+  ],
+  "history": [
+    {
+      "version": "1.2.0",
+      "publishedAt": 1744070400000,
+      "changes": "dependencies 移除 infrastructure，新增 optional_skills 字段"
+    },
+    {
+      "version": "1.1.0",
+      "publishedAt": 1744070400000,
+      "changes": "level L3→L4，补充 NUCLEUS 执行引擎集成"
+    },
+    {
+      "version": "1.0.0",
+      "publishedAt": 1742774400000,
+      "changes": "初始版本"
+    }
+  ]
+}

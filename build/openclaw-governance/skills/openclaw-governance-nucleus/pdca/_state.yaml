@@ -1,0 +1,125 @@
+_file_cache:
+  N4-P1-T12-T01.yaml:
+    entry:
+      cycle_index: 1
+      is_active: false
+      project_id: ZT-P015
+      task_card_id: N4-P1-T12-T01
+      topic_id: N4-P1-T12
+      verdict: pass
+    mtime: '1778156787.7486298'
+  N4-P1-T12-T02.yaml:
+    entry:
+      cycle_index: 1
+      is_active: false
+      project_id: ZT-P015
+      task_card_id: N4-P1-T12-T02
+      topic_id: N4-P1-T12
+      verdict: pass
+    mtime: '1778194168.5185182'
+  N4-P1-T12-T03.yaml:
+    entry:
+      cycle_index: 1
+      is_active: false
+      project_id: ZT-P015
+      task_card_id: N4-P1-T12-T03
+      topic_id: N4-P1-T12
+      verdict: pass
+    mtime: '1778205285.9498205'
+  N4-P1-T12-T04.yaml:
+    entry:
+      cycle_index: 1
+      is_active: false
+      project_id: ZT-P015
+      task_card_id: N4-P1-T12-T04
+      topic_id: N4-P1-T12
+      verdict: pass
+    mtime: '1778206259.6835735'
+  N4-P1-T12-T05.yaml:
+    entry:
+      cycle_index: 1
+      is_active: false
+      project_id: ZT-P015
+      task_card_id: N4-P1-T12-T05
+      topic_id: N4-P1-T12
+      verdict: pass
+    mtime: '1778207074.1094277'
+  N4-P2-TEST-01.yaml:
+    entry:
+      cycle_index: 2
+      is_active: false
+      project_id: ZT-P015
+      task_card_id: N4-P2-TEST-01
+      topic_id: N4-P2-T02
+      verdict: pass
+    mtime: '1776825639.026627'
+  T1.1.yaml:
+    entry: null
+    mtime: '1776938031.494359'
+  T1.yaml:
+    entry:
+      cycle_index: 1
+      is_active: false
+      project_id: null
+      task_card_id: T1
+      topic_id: null
+      verdict: pass
+    mtime: '1776761189.9329345'
+  TEST-FIX-001.yaml:
+    entry:
+      cycle_index: 1
+      is_active: false
+      project_id: null
+      task_card_id: TEST-FIX-001
+      topic_id: null
+      verdict: pass
+    mtime: '1776653629.139186'
+  VERIFY-FIX-001.yaml:
+    entry:
+      cycle_index: 1
+      is_active: false
+      project_id: null
+      task_card_id: VERIFY-FIX-001
+      topic_id: null
+      verdict: pass
+    mtime: '1776669165.384013'
+  ZTP015-IMP-001.yaml:
+    entry:
+      cycle_index: 1
+      is_active: false
+      project_id: null
+      task_card_id: ZTP015-IMP-001
+      topic_id: null
+      verdict: pass
+    mtime: '1776761165.3879468'
+last_updated: '2026-05-08T02:24:34.112799+00:00'
+project_verdicts:
+  ZT-P015:
+    topic_count: 2
+    topics:
+      N4-P1-T12: pass
+      N4-P2-T02: pass
+    updated_at: '2026-05-07T12:26:27.752238+00:00'
+    verdict: pass
+scope: aggregate
+topic_verdicts:
+  N4-P1-T12:
+    active_count: 0
+    children:
+      N4-P1-T12-T01: pass
+      N4-P1-T12-T02: pass
+      N4-P1-T12-T03: pass
+      N4-P1-T12-T04: pass
+      N4-P1-T12-T05: pass
+    task_count: 5
+    updated_at: '2026-05-08T02:24:34.112784+00:00'
+    verdict: pass
+  N4-P2-T02:
+    active_count: 0
+    children:
+      N4-P2-TEST-01: pass
+    task_count: 1
+    updated_at: '2026-05-08T02:24:34.112790+00:00'
+    verdict: pass
+triggered_by: act:N4-P1-T12-T05
+version: '1.0'

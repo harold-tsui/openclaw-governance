@@ -1,0 +1,92 @@
+# Skill 扩展配置
+# 用户自定义 Skill 在此添加，不会被覆盖
+
+# 添加新的 L3 Skill
+l3_extensible:
+  - name: openclaw-governance-content
+    level: L3
+    agent: cco
+    triggers:
+      - 内容
+      - 文案
+      - 品牌
+      - 社媒
+    required: false
+
+  - name: openclaw-governance-visual
+    level: L3
+    agent: cvo
+    triggers:
+      - 图片
+      - 设计
+      - UI
+      - 视觉
+    required: false
+
+  - name: openclaw-governance-intelligence
+    level: L3
+    agent: cio
+    triggers:
+      - 调研
+      - 竞品
+      - 情报
+      - 信息
+    required: false
+
+  - name: openclaw-governance-financial
+    level: L3
+    agent: cfo
+    description: 财务治理 - 预算管理、投资决策、ROI 分析
+    path: skills/nucleus-tools/openclaw-governance-financial/
+    triggers:
+      - 预算
+      - 投资
+      - ROI
+      - 财务
+    required: false
+
+# 添加新的 L4 业务 Skill
+l4_business:
+  - name: openclaw-governance-auto
+    level: L4
+    agent: ld
+    triggers:
+      - 汽车
+      - 车型
+      - 技术
+    required: false
+
+  - name: openclaw-governance-ecommerce
+    level: L4
+    agent: ec-ceo
+    triggers:
+      - 电商
+      - 店铺
+      - 商品
+      - 运营
+    required: false
+
+triggers:
+  内容: openclaw-governance-content
+  文案: openclaw-governance-content
+  品牌: openclaw-governance-content
+  社媒: openclaw-governance-content
+  图片: openclaw-governance-visual
+  设计: openclaw-governance-visual
+  UI: openclaw-governance-visual
+  视觉: openclaw-governance-visual
+  调研: openclaw-governance-intelligence
+  竞品: openclaw-governance-intelligence
+  情报: openclaw-governance-intelligence
+  信息: openclaw-governance-intelligence
+  预算: openclaw-governance-financial
+  投资: openclaw-governance-financial
+  ROI: openclaw-governance-financial
+  财务: openclaw-governance-financial
+  汽车: openclaw-governance-auto
+  车型: openclaw-governance-auto
+  技术: openclaw-governance-auto
+  电商: openclaw-governance-ecommerce
+  店铺: openclaw-governance-ecommerce
+  商品: openclaw-governance-ecommerce
+  运营: openclaw-governance-ecommerce

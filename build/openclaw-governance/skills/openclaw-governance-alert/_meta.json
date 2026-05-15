@@ -1,0 +1,23 @@
+{
+  "owner": "openclaw-governance",
+  "slug": "openclaw-governance-alert",
+  "displayName": "openclaw-governance-alert",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1744070400000,
+    "commit": ""
+  },
+  "templates": {
+    "dir": "templates",
+    "alert_report": "templates/TMPL-ALERT-REPORT.md",
+    "alert_escalation": "templates/TMPL-ALERT-ESCALATION.md",
+    "alert_summary": "templates/TMPL-ALERT-SUMMARY.md"
+  },
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1744070400000,
+      "changes": "初始版本"
+    }
+  ]
+}

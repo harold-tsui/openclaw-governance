@@ -1,0 +1,24 @@
+# Runtime
+.venv/
+__pycache__/
+*.pyc
+htmlcov/
+.pytest_cache/
+.coverage
+.DS_Store
+
+# Archived Phase 1 artifacts (4000+ legacy files)
+archived/
+development/nucleus-v1-archive/
+
+# Logs
+logs/
+*.jsonl
+
+# PDCA state (runtime)
+skills/openclaw-governance/skills/openclaw-governance-nucleus/pdca/
+skills/openclaw-governance/skills/openclaw-governance-nucleus/logs/
+
+# Cycles runtime
+skills/openclaw-governance/cycles/
+build/openclaw-governance/cycles/

@@ -1,0 +1,42 @@
+{
+  "owner": "openclaw-governance",
+  "slug": "openclaw-governance-delegation",
+  "displayName": "openclaw-governance-delegation",
+  "latest": {
+    "version": "1.6.0",
+    "publishedAt": 1744934400000,
+    "commit": ""
+  },
+  "history": [
+    {
+      "version": "1.6.0",
+      "publishedAt": 1744934400000,
+      "changes": "§10.2 A/B/C/D 快速回复 + §10.4 超时升级规则（7天）"
+    },
+    {
+      "version": "1.5.0",
+      "publishedAt": 1744934400000,
+      "changes": "新增 §十 Review 请求协议（Human-in-the-Loop Check）"
+    },
+    {
+      "version": "1.4.0",
+      "publishedAt": 1744070400000,
+      "changes": "版本号统一 + 双§四/双§七章节号冲突修复 + check_authorization/check_route_permission 边界明确"
+    },
+    {
+      "version": "1.3.1",
+      "publishedAt": 1743552000000,
+      "changes": "§五 新增权限检查（从 governance-dispatch 移入）；check_route_permission() 新增"
+    },
+    {
+      "version": "1.2.0",
+      "publishedAt": 1742774400000,
+      "changes": "决策自动化分级（§三）、LESSON-LEARN 集成（§七）新增"
+    },
+    {
+      "version": "1.0.0",
+      "publishedAt": 1742083200000,
+      "changes": "初始版本"
+    }
+  ]
+}

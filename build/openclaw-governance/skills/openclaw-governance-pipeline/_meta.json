@@ -1,0 +1,17 @@
+{
+  "owner": "openclaw-governance",
+  "slug": "openclaw-governance-pipeline",
+  "displayName": "openclaw-governance-pipeline",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1742688000000,
+    "commit": ""
+  },
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1742688000000,
+      "changes": "初始版本：流水线编排能力（10步闭环流程，集成 DOD/Review-gate/Risk/Knowledge）"
+    }
+  ]
+}

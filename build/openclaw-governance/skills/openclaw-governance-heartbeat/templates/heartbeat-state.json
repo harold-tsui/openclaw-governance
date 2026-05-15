@@ -1,0 +1,45 @@
+{
+  "version": "2.0.0",
+  "updated_at": "${DATE}",
+  "description": "Heartbeat PDCA 执行状态模板，跟踪 PDCA 周期记录和汇报状态",
+  "source_skill": "governance-heartbeat v7.0.0",
+
+  "last_pdca": {
+    "task_card_id": null,
+    "task_card_path": null,
+    "cycle_index": 0,
+    "step": null,
+    "verdict": null,
+    "review_level": null,
+    "review_status": null,
+    "timestamp": null
+  },
+
+  "stats": {
+    "total_cycles": 0,
+    "pass_count": 0,
+    "fail_count": 0,
+    "partial_count": 0,
+    "consecutive_fails": 0,
+    "consecutive_blocked": 0,
+    "audit_count": 0,
+    "audit_pass_count": 0,
+    "audit_fail_count": 0
+  },
+
+  "reporting": {
+    "morning_last_sent": null,
+    "evening_last_sent": null,
+    "exception_last_sent": null
+  },
+
+  "paused_tasks": [],
+
+  "metadata": {
+    "agent_id": "${AGENT_ID}",
+    "agent_name": "${AGENT_NAME}",
+    "workspace": "${OPENCLAW_LOCAL_WORKSPACE}",
+    "timezone": "Asia/Shanghai",
+    "created_at": "${DATETIME}"
+  }
+}

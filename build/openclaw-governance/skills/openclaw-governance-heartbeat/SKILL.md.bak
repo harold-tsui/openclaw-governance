@@ -1,0 +1,864 @@
+---
+name: openclaw-governance-heartbeat
+description: |
+  巡检协议 - 分布式日常巡检规范，所有 Agent 参与。
+  Activate: 用户消息匹配能力描述时自动加载（description匹配）
+  Contains: 分布式 heartbeat、各 Agent MISSION_BOARD 维护、全局协调、决策自动化分级驱动
+metadata:
+  version: "5.8.0"
+  level: "L2"
+  os: ["darwin", "linux"]
+  dependencies:
+    - openclaw-governance-core
+    - openclaw-governance-nucleus  # NUCLEUS 4.0 集成（Step 3a 调度器触发）
+---
+
+# HEARTBEAT - 分布式巡检协议
+
+Tags: #governance, #heartbeat, #monitoring, #distributed, #coordination
+
+> **触发模式**：描述匹配触发 + 模型主动 read()
+> **定位**：驱动器，驱动 Project & Task 的执行和评估
+> **v5.8.0**: 新增 Step 3b 周期性任务触发引擎（NUCLEUS-4.0-TEST-002 修复）
+
+---
+
+## 引用规范
+
+| 规范 | 版本 | 说明 |
+|------|------|------|
+| **ZT-2026-007** | v1.1 | 交付物路径规范（含 Topic 目录命名规范、路径校验） |
+| **governance-task** | v6.0.2 | Task 生命周期管理 |
+| **governance-hierarchy** | v2.5.0 | Project/Topic 管理、状态冒泡 |
+| **governance-delegation** | v1.6.0 | 决策自动化分级、Review 级别判定 |
+| **ARCH-001** | v1.1 | 治理框架架构（决策自动化分级定义） |
+
+---
+
+## 一、核心理念
+
+### 1.0 Heartbeat 启动加载
+
+```
+if Heartbeat 执行:
+    # Step 1: 加载任务看板
+    read 60_Agents/{agent_id}/MISSION_BOARD.md
+    
+    # Step 2: 执行职责跟踪
+    call track_responsibilities()
+```
+
+### 1.1 MISSION_BOARD 分布
+
+| Agent | MISSION_BOARD 路径 |
+|-------|-------------------|
+| **main (银月)** | `${OPENCLAW_LOCAL_WORKSPACE}/MISSION_BOARD.md` |
+| **其他 Agent** | `${OPENCLAW_LOCAL_WORKSPACE}/60_Agents/[agent]/MISSION_BOARD.md` |
+
+### 1.2 分布式架构
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    MISSION_BOARD 结构                     │
+├─────────────────────────────────────────────────────────┤
+│  main: MISSION_BOARD.md (根目录)                         │
+│    │                                                     │
+│    ├── 汇总全局状态                                       │
+│    ├── 协调各 Agent                                      │
+│    └── Harold 日报                                       │
+│                                                         │
+│  各 Agent: 60_Agents/[agent]/MISSION_BOARD.md           │
+│    │                                                     │
+│    ├── 维护自己的四层跟踪                                │
+│    ├── 向银月汇报                                        │
+│    └── 实时进展上报                                      │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 1.3 职责跟踪规则
+
+> **来源**：ADR-002 Config 运行时加载机制
+
+**判断逻辑**：
+
+```python
+def should_track(item, agent_id):
+    """判断是否需要跟踪某项目/Topic/Task"""
+    # 1. 自己负责的项目 → 跟踪该项目下所有
+    if item.project_owner == agent_id:
+        return True
+    
+    # 2. 不是自己负责的项目 → 只跟踪分配给自己的
+    if item.project_owner != agent_id:
+        if item.pic == agent_id:  # pic是自己的
+            return True
+        return False
+    
+    return False
+```
+
+---
+
+### 1.4 Heartbeat-Task 绑定原则 ⭐ v5.3
+
+**核心规则**：每个 heartbeat 周期必须完成至少一个 Task 的推进或关闭。
+
+**Harold 目标**：「一个 heartbeat 完成一个 task」，确保高效执行。
+
+**执行逻辑**：
+```
+Heartbeat 触发
+    ↓
+扫描 MISSION_BOARD 待处理队列
+    ↓
+选择优先级最高的 Task
+    ↓
+推进该 Task（执行/验收/关闭）
+    ↓
+更新 MISSION_BOARD 状态
+    ↓
+Heartbeat 完成
+```
+
+**例外情况**：
+- 无待处理 Task → 执行维护性任务（如知识沉淀核查）
+- Task 阻塞 → 记录阻塞原因，升级到 Harold 队列
+
+**效果验证**：
+- Heartbeat 次数与 Task 完成数应接近 1:1
+- 偏差超过 20% → 触发改进评估
+
+---
+
+**跟踪行为**：
+
+| 职责范围 | 跟踪行为 |
+|----------|----------|
+| **自己负责的项目** | 跟踪该项目的所有Topic和Task |
+| **不是自己负责的项目** | 不跟踪（除非有分配给自己的Topic/Task） |
+| **pic为自己的Topic** | 负全责：跟踪、推进、关闭 |
+| **pic为自己的Task** | 负全责：跟踪、推进、关闭 |
+
+---
+
+## 二、Heartbeat 按需加载规则（显式声明）
+
+> **核心原则**：显式声明，让 LLM 能理解应该加载哪个 Skill
+> 
+> **触发时机**：Heartbeat 执行时 → 检查任务/项目情况 → 根据情况加载 Skill
+
+### 2.1 任务情况检测规则
+
+```
+if Heartbeat 执行:
+    # Step 1: 扫描任务状态
+    检查 MISSION_BOARD 中的 Task 状态
+    
+    # Step 2: 识别需要处理的情况
+    if 存在进行中任务:
+        情况列表 += "进行中任务"
+    if 存在待审核交付物:
+        情况列表 += "待审核交付物"
+    if 存在阻塞任务:
+        情况列表 += "阻塞任务"
+    if 存在 P0/P1 任务:
+        情况列表 += "高优先级任务"
+    if 检测到质量问题:
+        情况列表 += "质量问题"
+    if 需要创建新任务:
+        情况列表 += "需要创建任务"
+    if 需要更新项目状态:
+        情况列表 += "项目状态变更"
+```
+
+### 2.2 情况 → Skill 加载规则
+
+```
+# 任务管理
+if 情况 == "进行中任务":
+    load governance-task
+    call check_task_status()
+    call update_progress()
+
+if 情况 == "高优先级任务":
+    load governance-task
+    load governance-quality
+    call prioritize_task()
+
+# 质量管控
+if 情况 == "待审核交付物":
+    load governance-quality
+    call review()
+
+if 情况 == "质量问题":
+    load governance-quality
+    call report_issue()
+    call pdca_cycle()
+
+# 授权升级
+if 情况 == "阻塞任务":
+    load governance-delegation
+    call check_automation_level()
+    call escalate_if_needed()
+
+# 层级管理
+if 情况 == "需要创建任务":
+    load governance-task
+    call create_task()
+
+if 情况 == "项目状态变更":
+    load governance-hierarchy
+    call update_project_status()
+    call bubble_up()
+```
+
+### 2.3 情况 → Skill 映射表
+
+| 任务情况 | 需要加载的 Skill | 调用函数 | 后续动作 |
+|----------|------------------|----------|----------|
+| 进行中任务 | governance-task | check_task_status() | 检查进度、更新状态 |
+| 待审核交付物 | governance-quality | review() | 触发审核流程 |
+| 阻塞任务 | governance-delegation | check_automation_level() | 决定是否升级 |
+| 高优先级任务 | governance-task + governance-quality | prioritize_task() | 优先处理 |
+| 质量问题 | governance-quality | report_issue() | 记录并改进 |
+| 需要创建任务 | governance-task | create_task() | 创建新任务 |
+| 项目状态变更 | governance-hierarchy | update_project_status() | 状态冒泡 |
+
+### 2.4 多情况并行加载
+
+```
+if 多个情况同时存在:
+    # 按优先级顺序加载
+    优先级顺序:
+        1. 阻塞任务 (最高优先)
+        2. 高优先级任务
+        3. 待审核交付物
+        4. 进行中任务
+        5. 项目状态变更
+    
+    for 情况 in 情况列表 (按优先级排序):
+        load 情况对应的 Skill
+        执行后续动作
+```
+
+### 2.5 加载规则总结
+
+```
+Heartbeat 执行:
+    1. 检查任务状态 → 识别需要处理的情况
+    2. 根据情况加载对应的 Skill
+    3. 执行后续动作
+    4. 记录执行结果
+    5. 汇报给银月/Harold
+```
+
+---
+
+### 2.6 四层跟踪（来自 TMPL-MISSION_BOARD）
+
+每个 Agent 需要在 MISSION_BOARD 中维护 4 个层级：
+
+```
+Project → Topic → Task → Deliverable
+```
+
+### 2.7 Agent 维护清单
+
+```
+[ ] 扫描自己负责的 Project
+    - 确认 Project 状态（🟢活跃/🟡过渡/🔴暂停）
+    - 确认自己在项目中的角色（PIC/参与/观察）
+
+[ ] 扫描自己负责/参与的 Topic
+    - 更新 Topic 状态
+    - 记录 Task 进度
+
+[ ] 扫描自己负责/参与的 Task
+    - 更新 Task 状态（[ ]/[P]/[V]/[x]/[?]）
+    - 识别阻塞任务
+
+[ ] 扫描待验收 Deliverable
+    - 检查是否有自己的交付物待验收
+```
+
+### 2.8 MISSION_BOARD 模板
+
+> 详细模板见：`TMPL-MISSION_BOARD.md`
+
+---
+
+---
+
+## 三、银月 heartbeat 职责
+
+### 3.1 七步流程
+
+```
+Step 0  Scope Declaration    上下文加载与声明
+Step 1  MISSION_BOARD Triage  任务板巡检与分类
+Step 2  Review 级别判断        新增任务确认 Review 级别
+Step 3  执行推进 & 状态冒泡   推进阻塞、核查完成、向上同步状态
+Step 4  知识沉淀后处理核查   Weekly Review 核查，3 工作日宽限期，不阻塞关闭但阻塞归档（对齐 TASK-CARD v3.0）
+Step 5  授权降级评估         评估是否满足阶段升级或授权降级条件
+Step 6  质量管控核查         核查张铁审核状态、质量指标
+Step 7  用户 日报            汇总今日情况，提交 Harold
+```
+
+### 3.2 主动全盘扫描（v5.8.1 新增）
+
+银月 Heartbeat 采用 **主动全盘扫描** 机制，直接读取唯一真相源（TASK-CARD 文件）：
+
+```python
+# Step 3a: 主动全盘扫描 - 替代被动依赖上报
+python ${OPENCLAW_LOCAL_WORKSPACE}/10_Projects/ZT-P015_NUCLEUS-4-0/deliverables/NUCLEUS-4.0-TEST-003/scripts/full_scan.py
+
+# Step 3b: 生成全局状态报告
+# 输出文件：
+# - full_scan_result.json (结构化数据)
+# - global_status_report.md (人类可读报告)
+```
+
+**优势**：
+- 不依赖 Agent 上报（解决跨 Agent 协作任务不可见问题）
+- 直接读取 TASK-CARD 唯一真相源
+- 100% 覆盖率，实时准确
+- 自动发现未同步到 MISSION_BOARD 的任务
+
+### 3.3 全局 MISSION_BOARD 维护
+
+银月负责维护根目录的 `MISSION_BOARD.md`，新增 **「全盘扫描结果」**区：
+
+```markdown
+# MISSION_BOARD - 全局任务看板
+
+### 一、各 Agent 状态汇总
+| Agent | 活跃任务 | 阻塞 | 状态 | 自动化级别 |
+|-------|---------|------|------|-----------|
+| CTO | 3 | 0 | 🟢 | L3 |
+| CDO | 1 | 1 | 🟡 | L4 |
+...
+
+### 二、Project 状态（汇总）
+...
+
+### 三、阻塞任务（全局）
+...
+```
+
+### 3.4 决策自动化分级驱动
+
+> **调用 governance-delegation v1.6.0**
+
+银月在 heartbeat 中驱动决策自动化分级评估：
+
+```
+Step 5: 授权降级评估
+    ↓
+调用 governance-delegation.determine_automation_level()
+    ├─ 检查 DL 命中率
+    ├─ 检查连续成功次数
+    └─ 评估是否满足级别调整条件
+    ↓
+返回建议：
+    ├─ 可升级 → 记录到 DL，通知 Harold
+    ├─ 维持现状 → 继续监控
+    └─ 需降级 → 立即通知 Harold
+```
+
+**评估时机**：
+- 每次 Task 完成后
+- 每周汇总时
+- Agent 主动请求时
+
+### 3.5 evaluate_all_agents()
+
+**职责**：批量评估所有 Agent 的自动化级别。
+
+**触发条件**：
+- 每周 heartbeat 汇总时
+- Harold 主动请求时
+
+**处理流程**：
+```python
+def evaluate_all_agents():
+    # 1. 读取 automation-levels.yaml
+    agents = read_yaml("automation-levels.yaml")["agents"]
+    
+    results = []
+    for agent in agents:
+        # 2. 调用 determine_automation_level()
+        result = determine_automation_level(agent["id"])
+        
+        # 3. 如果需要调整，调用 adjust_automation_level()
+        if result["adjustment"] == "can_upgrade":
+            adjust_automation_level(agent["id"], new_level)
+            results.append({
+                "agent": agent["id"],
+                "action": "upgrade",
+                "from": agent["current_level"],
+                "to": result["calculated_level"]
+            })
+        elif result["adjustment"] == "need_downgrade":
+            adjust_automation_level(agent["id"], new_level)
+            results.append({
+                "agent": agent["id"],
+                "action": "downgrade",
+                "from": agent["current_level"],
+                "to": result["calculated_level"]
+            })
+    
+    # 4. 生成报告
+    return generate_automation_report(results)
+```
+
+**输出报告格式**：
+```markdown
+# 自动化级别评估报告 · 2026-03-19
+
+### 评估结果汇总
+| Agent | 当前级别 | 评估结果 | 操作 |
+|-------|---------|---------|------|
+| cdo | L3 | 可升级 | L3 → L4 |
+| cqo | L3 | 维持 | - |
+| cto | L2 | 可升级 | L2 → L3 |
+
+### 详细评估
+### cdo (辛如音)
+- DL 命中率: 88% (>=80% ✅)
+- 连续成功: 5次 (>=3 ✅)
+- 升级得分: 100分
+- 建议: 升级至 L4
+
+### 需 Harold 确认
+- cdo: L3 → L4
+- cto: L2 → L3
+```
+
+---
+
+## 四、实时进展上报机制（Pop-up）
+
+> 引用自 TMPL-HEARTBEAT.md v1.8
+
+### 4.1 触发条件
+
+| 触发点 | 上报内容 |
+|--------|---------|
+| 收到 Harold 消息开始分析 | "正在分析消息" |
+| 判定为正式任务 | "判定为任务，正在整理" |
+| 任务创建完成 | "任务已创建，准备分发" |
+| 收到子 Agent 汇报 | "收到汇报，正在向 Harold 汇报" |
+| 遇到阻塞 | "遇到阻塞，需要 Harold 决策" |
+
+### 4.2 上报格式
+
+```
+[进展] Task-XXX: 正在[当前动作]
+状态：分析中→整理中→已创建→分发中→完成
+```
+
+### 4.3 阻塞处理（来自 TMPL-HEARTBEAT Step 3a）
+
+| 阻塞类型 | 处理方式 | 时限 |
+|---|---|---|
+| 缺少输入物 | 联系输入物来源方，催促提供 | 立即处理 |
+| 等待 Harold 决策 | 确认已移入 §四 | 24h 超时提醒 |
+| Agent 间依赖阻塞 | 联系前置 Task PM | 2 小时内 |
+| 外部依赖阻塞 | 记录外部依赖状态 | 2 小时内 |
+
+---
+
+## 五、巡检频率与汇报规则
+
+> **v5.2.0 新增**：Harold 决策（2026-04-08）明确汇报节奏
+
+### 5.1 汇报类型
+
+| 汇报类型 | 时间 | 内容 | 条件 |
+|----------|------|------|------|
+| **晨会报告** | 早 7:00 | 完整状态报告（任务进展、阻塞、今日计划） | 每日固定 |
+| **夕会报告** | 晚 9:00 | 完整状态报告（今日完成、明日计划） | 每日固定 |
+| **异常/变更报告** | 实时 | 只报告变化/异常部分 | 有状态变更或阻塞 |
+
+### 5.2 静默执行规则
+
+**其他时间（非 7:00/21:00）**：
+- 执行完整 heartbeat 流程（Step 1-7）
+- 更新 MISSION_BOARD
+- **不发飞书消息**（除非有异常或状态变更）
+- 本地记录到 `heartbeat-state.json`
+
+### 5.3 原巡检频率（调整后）
+
+| 类型 | 频率 | 参与 | 汇报方式 |
+|------|------|------|----------|
+| **晨会 heartbeat** | 早 7:00 | 全部 Agent | 发飞书报告 |
+| **夕会 heartbeat** | 晚 9:00 | 全部 Agent | 发飞书报告 |
+| **中间 heartbeat** | 每 30 分钟 | 全部 Agent | 静默执行，不发消息 |
+| **P0 任务期间** | 每 4 小时 | 全部 Agent | 静默执行，异常时发消息 |
+| **周度汇总** | 每周五 | 银月 | 发飞书完整报告 |
+
+### 5.4 报告模板
+
+**晨会报告**：
+```markdown
+晨会报告 · YYYY-MM-DD 07:00
+
+📋 任务进展：
+- 活跃任务：N 个
+- 进行中：[Task 名称]
+
+🚫 阻塞：[无/具体阻塞]
+
+📅 今日计划：
+- [ ] [计划事项 1]
+- [ ] [计划事项 2]
+
+状态：🟢/🟡/🔴
+```
+
+**夕会报告**：
+```markdown
+夕会报告 · YYYY-MM-DD 21:00
+
+✅ 今日完成：
+- [x] [完成事项 1]
+- [x] [完成事项 2]
+
+📊 统计：
+- 本周完成任务数：N
+- 活跃任务：N 个
+
+📅 明日计划：
+- [ ] [计划事项 1]
+
+状态：🟢/🟡/🔴
+```
+
+**异常/变更报告**：
+```markdown
+⚠️ 状态变更 · YYYY-MM-DD HH:MM
+
+变更内容：
+- [具体变更]
+
+影响：[影响范围]
+```
+
+---
+
+## 六、各 Agent heartbeat 检查清单
+
+### 6.1 执行步骤
+
+```
+[Step 1] 读取自己的 MISSION_BOARD.md
+[Step 2] 扫描四层跟踪（Project/Topic/Task/Deliverable）
+[Step 3] 更新状态 ⭐ 必须包含文件编辑
+    3.1 使用 edit 工具编辑 MISSION_BOARD.md §一 状态总览
+    3.2 使用 edit 工具编辑 MISSION_BOARD.md §九 "最后更新" 时间
+    3.3 使用 write 工具更新 heartbeat-state.json
+    3.4 使用 write 工具创建/更新 memory/YYYY-MM-DD.md
+    3.5 验证：重新读取 MISSION_BOARD.md 确认更新成功
+    
+    **禁止行为**：
+    - ❌ 只发送飞书消息但不编辑 MISSION_BOARD.md 文件
+    - ❌ 只更新 heartbeat-state.json 但不编辑 MISSION_BOARD.md
+    - ❌ Heartbeat 执行超过 24 小时但 MISSION_BOARD.md 未更新
+    
+[Step 3a] NUCLEUS PDCA Harness（统一 heartbeat 入口）
+    ↓
+    目标：驱动每个 task 持续迭代直至交付（见 nucleus SKILL.md §四）
+
+    前置 — 调度计数器（nucleus v2.6.0+）
+       python {baseDir}/scripts/scheduler_state.py bump    ← 递增所有计数器
+       python {baseDir}/scripts/scheduler_state.py check   ← 判断哪些 scope 达到阈值
+       python {baseDir}/scripts/pdca.py aggregate           ← 聚合最新 verdict（可选）
+
+    0. 检查 pending（human review 等待中）
+       python {baseDir}/scripts/pdca.py pending
+       → 非空：for each item：
+           ① 检查 Feishu DM 是否有 Harold 对该 task 的回复
+           ─ 有回复 → 解析 A/B/C/D，调用 pdca.py c 记录 verdict，执行 Act，触发知识沉淀
+             （详细步骤见 nucleus SKILL §4.1 Step 0）
+           ─ 无回复 + is_overdue=true（>7天）：
+               MISSION_BOARD 对应条目升级为 [!]
+               feishu_post 重新通知 Harold（标注"Review 已逾期 {days_waiting} 天"）
+           ─ 无回复 + 未超时：记录状态，继续
+
+    1. 从 MISSION_BOARD 选出最高优先级未完成 task-card
+       （优先选上次 verdict=fail/partial 的任务，体现持续优化）
+
+    2. 读取 task-card 全文 + 历史 PDCA 状态：
+       python {baseDir}/scripts/pdca.py status --task-card-id {task_card_id}
+
+    3. Plan（P）—— 明确本轮改进方向（基于上次根因）
+       python {baseDir}/scripts/pdca.py p --task-card-id {id} --summary "..." [--criteria "a|b"] [--task-card-path PATH] [--topic-id T06] [--project-id ZT-P015]
+
+    4. Do（D）—— LLM 执行实际工作
+       python {baseDir}/scripts/pdca.py d --task-card-id {id} --summary "..." --status completed|blocked|partial
+
+    5. Check（C）—— 对照验收标准自查或触发人工审批
+       python {baseDir}/scripts/pdca.py c --task-card-id {id} --verdict pass|partial|fail|skip|pending --level L0|L1|L2|L3
+
+    6. Act（A）—— 决定下一步，pass 时更新 task-card + MISSION_BOARD
+       python {baseDir}/scripts/pdca.py a --task-card-id {id} --summary "..." [--next-task T1.2] [--task-state "[x]|[P]|[V]"]
+
+**⚠️ 注意**：NUCLEUS 由 heartbeat 触发，不使用独立 cron job。每次 heartbeat 必须完整走完 P→D→C→A（pending 时 Act 跳过等下次）。
+**⚠️ Phase 锁定（v2.7.0+）**：d/c/a 各阶段有严格的先后顺序校验，不能跳步。pdca.py 会在 phase 不匹配时返回 error。
+
+[Step 3b] 周期性任务触发引擎 ⭐ v5.8.0 新增（NUCLEUS-4.0-TEST-002 修复）
+    ↓
+    **问题背景**：Heartbeat 每 30 分钟触发，但不会检查"当前时间是否应该执行周期性任务"
+    **根因**：MISSION_BOARD §十一 定义了任务周期，但 Heartbeat 流程不读取、不匹配、不触发
+    **影响**：每日备份（03:00）滞后 12 天，湖仓监控（09:30）从未执行
+    
+    **修复方案**：新增 heartbeat_scheduler.py + backup_validator.py
+    
+    0. 时间匹配检查
+       python {heartbeatDir}/scripts/heartbeat_scheduler.py check
+       → 返回应执行但未执行的任务列表
+       
+       时间窗口：触发时间前后 15 分钟（允许 heartbeat 周期偏差）
+       
+    1. 任务触发
+       python {heartbeatDir}/scripts/heartbeat_scheduler.py trigger --task-id {task_id}
+       → 调用对应的执行脚本（如 backup.sh）
+       → 记录执行状态到 scheduled_tasks.json
+       
+    2. 执行验证
+       python {heartbeatDir}/scripts/backup_validator.py check --date {YYYY-MM-DD}
+       → 检查备份目录是否存在
+       → 验证文件数量和大小
+       → 确认关键文件已备份
+       
+    3. 状态同步
+       if 执行成功:
+           更新 MISSION_BOARD §三 任务状态为 ✅ 完成
+           记录到 heartbeat-state.json
+       else:
+           标记为 ⚠️ 异常
+           发送飞书通知给负责 Agent
+    
+    **周期性任务定义**（来自 MISSION_BOARD §十一）:
+    | Task ID | 触发时间 | 触发条件 | 执行脚本 |
+    |---------|---------|---------|----------|
+    | SYS-DATA-OPS-T01 | 03:00 | 每天 | backup.sh incremental |
+    | SYS-DATA-OPS-T02 | 04:30 | 每周日 | backup.sh full |
+    | SYS-DATA-OPS-T05 | 09:30 | 每天 | lakehouse_monitor.sh |
+    
+    **脚本路径**:
+    - heartbeat_scheduler.py: {heartbeatDir}/scripts/heartbeat_scheduler.py
+    - backup_validator.py: {heartbeatDir}/scripts/backup_validator.py
+    - backup.sh: {dataDir}/scripts/backup.sh
+    
+    **执行状态文件**:
+    - .system/governance/heartbeat-logs/scheduled_tasks.json
+    
+**⚠️ 注意**：周期性任务由 heartbeat 时间匹配触发，不依赖外部 cron。Agent 在 heartbeat 时自动检查并触发。
+
+[Step 4] 识别阻塞（超过 2 天标记 [?]）
+[Step 5] 检查待验收交付物
+[Step 6] 准备报告
+[Step 7] 发送给银月
+```
+
+### 6.2 报告格式
+
+```json
+{
+  "agent_id": "cto",
+  "heartbeat_time": "2026-03-18T09:00:00+08:00",
+  "overview": {
+    "active_tasks": 3,
+    "blocked_tasks": 0,
+    "status": "🟢"
+  },
+  "projects": [
+    { "id": "ZT-P005", "role": "PIC", "status": "🟢" }
+  ],
+  "topics": [
+    { "id": "T01", "status": "[P]", "progress": "50%" }
+  ],
+  "tasks": [
+    { "id": "T01-T01", "status": "[P]", "progress": "80%", "blocker": null }
+  ],
+  "deliverables_pending": [],
+  "blockers": []
+}
+```
+
+---
+
+## 七、银月发起 heartbeat
+
+### 7.1 发起通知
+
+```python
+# 银月发给每个 Agent
+sessions_spawn(
+    agentId="cto",
+    task=f"""## 分布式 Heartbeat 检查
+
+请读取并更新你的 MISSION_BOARD：
+- 路径：60_Agents/cto/MISSION_BOARD.md
+- 模板：TMPL-MISSION_BOARD.md
+
+执行四层跟踪检查，然后向银月汇报状态。""",
+    timeoutSeconds=120,
+    mode="run",
+    runtime="subagent"
+)
+```
+
+### 7.2 超时处理
+
+如果 Agent 超过 120s 未响应：
+- 记录为「未响应」
+- 继续扫描其他 Agent
+- 在 Harold 日报中标注
+
+---
+
+## 八、Task-CARD 作为 AI 总线
+
+> **决策来源**：T08 AI 总线机制研究，Harold 批准实施方案A
+
+### 8.1 核心理念
+
+Task-CARD 是 Agent 间上下文传递的标准机制：
+
+```
+Agent A (银月)
+    ↓ 写入决策、进度、问题
+Task-CARD
+    ↓ 读取上下文
+Agent B (张铁)
+    ↓ 写入执行结果
+Task-CARD
+    ↓ 读取结果
+Agent C (菡云芝)
+```
+
+### 8.2 上下文传递规则
+
+| 传递场景 | 写入内容 | 读取时机 |
+|----------|----------|----------|
+| 任务分配 | 目标、输入物、验收标准 | 接收任务时 |
+| 进度更新 | 完成度、阻塞、风险 | heartbeat 时 |
+| 交付验收 | 交付物、执行摘要 | 提交验收时 |
+| 问题上报 | 问题描述、影响范围 | 发现问题时 |
+
+### 8.3 与其他机制的关系
+
+| 机制 | 关系 |
+|------|------|
+| **Pipeline** | Task-CARD 记录 Pipeline 状态 |
+| **DOD** | Task-CARD 引用 DOD 验收标准 |
+| **Review-gate** | Task-CARD 存放审查产物 |
+| **Heartbeat** | Heartbeat 扫描 Task-CARD 状态 |
+
+---
+
+## 九、模板清单
+
+> **路径**：模板文件存储在 skill 目录中
+> `skills/openclaw-governance/skills/openclaw-governance-heartbeat/templates/`
+
+| 模板 | 用途 | 适用对象 | 版本 |
+|------|------|----------|------|
+| `templates/TMPL-HEARTBEAT.md` | Main Agent 心跳协议 | 银月（主调度） | v3.2 |
+| `templates/TMPL-HEARTBEAT-SUB.md` | Sub Agent 心跳协议 | 其他 Agent | v3.2 |
+| `templates/heartbeat-state.json` | 状态记录模板 | 所有 Agent | v1.1.0 |
+
+### 9.1 Main vs Sub 区分
+
+| 维度 | Main (银月) | Sub (其他 Agent) |
+|------|-------------|------------------|
+| **职责** | 全局协调、Harold日报 | 个人任务推进 |
+| **汇报对象** | Harold | 银月 |
+| **扫描范围** | 所有 Agent 的 MISSION_BOARD | 自己的 MISSION_BOARD |
+| **决策权限** | 可协调资源、调整优先级 | 执行任务、上报问题 |
+| **自动化分级** | 驱动评估、建议调整 | 接受评估结果 |
+
+### 9.2 Agent 初始化时模板选择
+
+```python
+# 创建 Agent 时，根据角色选择 heartbeat 模板
+def init_agent_heartbeat(agent_id):
+    if agent_id == "main":
+        template = "TMPL-HEARTBEAT.md"
+    else:
+        template = "TMPL-HEARTBEAT-SUB.md"
+    
+    # 复制模板到 Agent 工作目录
+    copy_template(template, f"60_Agents/{agent_id}/HEARTBEAT.md")
+```
+
+---
+
+## Related Skills
+- [[openclaw-governance-task]] - 任务管理，heartbeat驱动任务执行
+- [[openclaw-governance-core]] - 核心运行机制，heartbeat的基础
+- [[openclaw-governance-hierarchy]] - 层级管理，状态冒泡和协调
+
+---
+
+## 十、状态模板机制与权限说明
+
+**状态文件**：`60_Agents/{agent_id}/memory/heartbeat-state.json`
+
+**模板路径**：`skills/openclaw-governance/skills/openclaw-governance-heartbeat/templates/heartbeat-state.json`
+
+**初始化方式**：
+```bash
+# 首次使用时，从模板复制到 Agent 目录
+cp templates/heartbeat-state.json 60_Agents/{agent_id}/heartbeat-state.json
+
+# 替换占位符
+sed -i 's/${AGENT_ID}/cqo/g' 60_Agents/cqo/heartbeat-state.json
+sed -i 's/${OPENCLAW_LOCAL_WORKSPACE}/path/to/workspace/g' 60_Agents/cqo/heartbeat-state.json
+```
+
+**关键字段**：
+
+| 字段 | 用途 | 更新时机 |
+|------|------|----------|
+| `heartbeat.lastCheck` | 最后检查日期 | 每次 heartbeat |
+| `heartbeat.checkCount` | 累计检查次数 | 每次 heartbeat +1 |
+| `heartbeat.issues[]` | 发现的问题列表 | 发现问题时 |
+| `heartbeat.stats.heartbeatTaskRatio` | Heartbeat/Task 比例 | 每次 heartbeat 完成 |
+| `reporting.morningReport.lastSent` | 晨会报告发送时间 | 早 7:00 |
+| `reporting.eveningReport.lastSent` | 夕会报告发送时间 | 晚 9:00 |
+
+**Heartbeat-Task 绑定验证**：
+```python
+def verify_heartbeat_task_ratio(state):
+    """验证 Heartbeat-Task 比例是否达成 1:1 目标"""
+    ratio = state['heartbeat']['stats']['heartbeatTaskRatio']
+    if ratio >= 0.80:
+        return "OK"
+    else:
+        return "偏离 1:1 目标超过 20%，触发改进评估"
+```
+
+---
+
+*版本: 5.7.0 | 更新: 2026-04-18 | 变更: N4-P1-T07 T06 — 新增命令规范索引（引用 core/commands.md）；heartbeat 命令结构化定义*
+
+## 十一、命令规范
+
+> **详细 Command Spec** 见 `core/commands.md`，定义了 heartbeat 的结构化命令格式。
+>
+> **核心命令速查**：
+> - `gov heartbeat scan-mission-board --agent-id <id>` — 扫描任务看板
+> - `gov heartbeat track-responsibilities --agent-id <id>` — 职责跟踪
+> - `gov heartbeat update-mission-board` — 更新看板状态
+> - `gov heartbeat run-pdca-cycle --task-card-id <id>` — PDCA 循环驱动
+> - `gov heartbeat check-pending` — 检查 pending 队列
+> - `gov heartbeat generate-report` — 生成报告
+> - `gov heartbeat read-state` / `write-state` — 状态读写
+
+---
+
+*版本: 5.7.0 | 更新: 2026-04-18 | 变更: 新增 Step 3 文件编辑强制要求（方案 A+B）*

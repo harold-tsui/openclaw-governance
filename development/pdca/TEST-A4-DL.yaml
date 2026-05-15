@@ -1,0 +1,33 @@
+cycles:
+- a: null
+  c:
+    audit_eligible: true
+    audit_result:
+      has_problem: true
+      issues: []
+      score: 75
+      timestamp: '2026-04-16T15:33:11.529389+00:00'
+    evidence:
+    - 通过
+    review_level: L1
+    timestamp: '2026-04-16T15:33:11.525578+00:00'
+    verdict: pass
+  completed_at: null
+  cycle_index: 1
+  d:
+    blocker: null
+    status: completed
+    summary: 执行
+    timestamp: '2026-04-16T15:33:11.524601+00:00'
+  p:
+    acceptance_criteria:
+    - 标准A
+    dl_refs:
+    - DL-001
+    - DL-002
+    summary: 测试DL质疑
+    timestamp: '2026-04-16T15:33:11.523519+00:00'
+  phase: act
+  started_at: '2026-04-16T15:33:11.523411+00:00'
+task_card_id: TEST-A4-DL
+task_card_path: null

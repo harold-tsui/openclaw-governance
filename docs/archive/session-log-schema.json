@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openclaw.ai/schemas/session-log-v1.json",
+  "title": "OpenClaw Session Log Schema",
+  "description": "JSON Schema for OpenClaw sessions/*.jsonl files",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["session", "message", "model_change", "thinking_level_change"],
+      "description": "Event type"
+    },
+    "id": {
+      "type": "string",
+      "description": "Event ID (UUID for session, short ID for message)"
+    },
+    "parentId": {
+      "type": "string",
+      "description": "Parent session ID (for message events)"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp"
+    },
+    "cwd": {
+      "type": "string",
+      "description": "Working directory (session events only)"
+    },
+    "message": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "type": "string",
+          "enum": ["user", "assistant"],
+          "description": "Message role"
+        },
+        "content": {
+          "description": "Message content (array of text/tool calls)"
+        },
+        "api": {
+          "type": "string",
+          "description": "API provider identifier"
+        },
+        "provider": {
+          "type": "string",
+          "description": "Model provider (e.g., bailian-coding, openrouter)"
+        },
+        "model": {
+          "type": "string",
+          "description": "Model identifier"
+        },
+        "usage": {
+          "type": "object",
+          "properties": {
+            "input": {"type": "integer"},
+            "output": {"type": "integer"},
+            "cacheRead": {"type": "integer"},
+            "cacheWrite": {"type": "integer"},
+            "totalTokens": {"type": "integer"}
+          },
+          "required": ["totalTokens"]
+        },
+        "cost": {
+          "type": "object",
+          "properties": {
+            "total": {"type": "number"}
+          }
+        },
+        "stopReason": {
+          "type": "string",
+          "description": "Stop reason (stop, error, length, etc.)"
+        },
+        "thinkingLevel": {
+          "type": "string",
+          "enum": ["off", "on", "stream"],
+          "description": "Thinking level (optional)"
+        }
+      },
+      "required": ["role"]
+    }
+  },
+  "required": ["type", "timestamp"],
+  "allOf": [
+    {
+      "if": {"properties": {"type": {"const": "session"}}},
+      "then": {"required": ["id", "cwd"]}
+    },
+    {
+      "if": {"properties": {"type": {"const": "message"}}},
+      "then": {"required": ["id", "parentId", "message"]}
+    }
+  ]
+}

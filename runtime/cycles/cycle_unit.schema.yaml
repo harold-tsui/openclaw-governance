@@ -1,0 +1,416 @@
+# CycleUnit Schema 定义
+
+# 版本：v1.3-fixed
+# 依据：ARCH v1.4.2 §2.1.1 + pdca-check-protocol v1.2 + TMPL-TASK-CARD §五
+# 创建日期：2026-04-05
+# 级别定义：L0=免审，L3=全量（与 task-card §五 对齐）
+# 设计原则：CycleUnit 是 PDCA 循环的**运行时状态容器**，不定义"做什么"——
+#           "做什么"由 task-card 定义，CycleUnit 只记录"现在在哪、结果如何、下一步去哪"。
+
+CycleUnit:
+
+  # ── 基础标识字段 ─────────────────────────────────────
+  id:
+    type: string
+    required: true
+    comment: 唯一标识符，格式：{scope}-{timestamp}-{random}
+
+  scope:
+    type: enum
+    values: [task, topic, project, system]
+    required: true
+    comment: 执行粒度，决定 CycleUnit 的层级和调度频率
+
+  task_card_id:
+    type: string
+    required: true
+    comment: |
+      绑定的 task-card ID（唯一真相源）。
+      intent、actions、acceptance_criteria 均从 task-card 读取，
+      CycleUnit 本身不重复存储这些内容。
+
+  task_card_path:
+    type: string
+    required: false
+    default: null
+    comment: |
+      task-card 文件完整路径，便于直接加载。
+      格式：tasks/{task_card_id}_TASK-CARD.md
+      若为 null，系统根据 task_card_id 自动拼接路径。
+
+  parent_cycle_id:
+    type: string | null
+    required: false
+    default: null
+    comment: |
+      父环 CycleUnit ID，null 表示顶级环（由 scheduler 直接创建）。
+      子环由 do.py create_child_cycle() 创建，写入时必须设置此字段。
+      用于 monitor.py _find_child_cycles() 按父环过滤。
+
+  phase:
+    type: enum
+    values: [plan, do, check, act]
+    required: true
+    comment: 当前阶段，PDCA 环的进度标记，只能按 plan→do→check→act→plan 顺序推进
+
+  # ── Plan 阶段状态字段 ─────────────────────────────────
+  # v1.3 变更：移除 check_reference，改为内存 review_context
+  # 验收策略由 determine_review() 从 task-card 读取，不持久化
+  # 参考：pdca-check-protocol v1.2 §3.2-3.4
+  plan:
+
+    # ── 时间约束 ───────────────────────────────────────
+    time_horizon_cycles:
+      type: integer
+      required: true
+      default: 10
+      comment: |
+        机器时间上限（heartbeat 周期数）。
+        human_approval_required=true 时，此字段作为 escalate 触发后的兜底计时器，
+        从 escalated_at 开始计，而非从 check 阶段开始计。
+
+    review_window:
+      type: string
+      required: false
+      default: "24h"
+      comment: |
+        人类时间窗口（可选）。默认 24h，
+        可在 task-card 中通过 review_window_hours 字段覆盖。
+        格式示例："2 business days", "48h"
+
+    human_approval_required:
+      type: boolean
+      required: true
+      default: false
+      comment: |
+        设计时声明：task-card 创建者指定是否需要人工审批。
+        系统启动 Check 阶段时，据此初始化 check.human_review.required。
+        级别对应规则：
+          L0（免审）：此字段为 false
+          L1（异常上报）：此字段为 false（正常流转不需审批）
+          L2（抽样核查）：此字段为 false（抽中时动态触发）
+          L3（全量人工）：此字段为 true（Harold 必须介入）
+
+    max_cycles:
+      type: integer
+      required: true
+      default: 10
+      comment: 最大循环次数，不能超过 metadata.global_max_cycles
+
+  # ── Do 阶段状态字段 ───────────────────────────────────
+  # 注意：do 阶段不存储 actions 定义（在 task-card 中），
+  #       只记录执行状态和子环引用。
+  do:
+    status:
+      type: enum
+      values: [not_started, in_progress, blocked, completed]
+      required: false
+      default: not_started
+      comment: Do 阶段整体执行状态
+
+    blocked_reason:
+      type: string | null
+      required: false
+      default: null
+      comment: |
+        status=blocked 时的阻塞原因。
+        格式建议："{阻塞类型}: {详细描述}"，如 "dependency: T1.3 未完成"。
+        status≠blocked 时此字段应为 null。
+
+    children:
+      type: list[string]
+      required: false
+      default: []
+      comment: |
+        子环 ID 列表（引用，非嵌套）。
+        子环 scope 不能大于父环 scope。
+        子环完整状态通过 id 查询对应 CycleUnit 文件获取。
+
+    execution_log_ref:
+      type: string | null
+      required: false
+      default: null
+      comment: |
+        执行日志文件引用，格式：executions/YYYY-MM-DD.jsonl#{line_offset}。
+        Do 阶段产生的所有执行记录写入 executions/ 目录，此字段记录入口位置。
+
+  # ── Check 阶段状态字段 ──────────────────────────────────
+  check:
+    verdict:
+      type: enum
+      values: [pass, partial, fail, skip, null]
+      required: false
+      default: null
+      comment: |
+        验收结果，null 表示 Check 阶段未完成：
+        pass:    全部 acceptance_criteria 通过
+        partial: 部分通过（含 human_timeout 降级场景）
+        fail:    全部失败
+        skip:    L0 免审（Task PIC 直接流转，Harold 不介入）。
+                 注意：skip 时 Act 阶段仍须调用 adjust_automation_level()，
+                 consecutive_count 不变，act.adjustments 须写入 type=maintain 记录。
+
+    evidence:
+      type: list[string]
+      required: false
+      default: []
+      comment: |
+        检查证据引用列表（文件路径或日志行引用）。
+        所有验收过程必须留证，含子环聚合结果摘要。
+
+    criteria_results:
+      type: list[CriterionResult]
+      required: false
+      default: []
+      comment: |
+        acceptance_criteria 逐项核对结果。
+        与从 task-card §五 读取的 acceptance_criteria 一一对应。
+
+    # ── Human Review 追踪（仅 human_approval_required=true 时使用）──
+    human_review:
+      required:
+        type: boolean
+        required: false
+        default: false
+        comment: |
+          运行时状态：系统根据 plan.human_approval_required 初始化。
+          注意：与 plan.human_approval_required 区分（设计时声明 vs 运行时状态）。
+
+      status:
+        type: enum
+        values: [pending, escalated, responded, timed_out, null]
+        required: false
+        default: null
+        comment: |
+          人工审批状态：
+          pending:   等待响应
+          escalated: 已升级通知
+          responded: 已响应
+          timed_out: 超时未响应 → verdict 强制为 partial，reason=human_timeout
+
+      requested_at:
+        type: timestamp | null
+        required: false
+        default: null
+        comment: 进入 pending 状态的时间（UTC）
+
+      escalated_at:
+        type: timestamp | null
+        required: false
+        default: null
+        comment: |
+          escalate 触发时间（UTC），null 表示未触发。
+          触发后，plan.time_horizon_cycles 从此时间开始计。
+
+      responded_at:
+        type: timestamp | null
+        required: false
+        default: null
+        comment: 人工响应时间，null 表示未响应
+
+      feishu_message_id:
+        type: string | null
+        required: false
+        default: null
+        comment: |
+          飞书消息 ID，用于追踪/去重/更新消息状态。
+          非 null 时跳过重复发送。
+
+  # ── Act 阶段状态字段 ───────────────────────────────────
+  act:
+    adjustments:
+      type: list[Adjustment]
+      required: false
+      default: []
+      comment: |
+        adjust_automation_level() 写入的调整结果列表。
+        verdict=skip 时仍须写入一条 type=maintain 的记录，
+        说明 consecutive_count 未变化、级别维持。
+        调整规则（级别范围 L0-L3）：
+          pass（连续≥3次）→ 升级（逐级，L2→L3 须 Harold 确认）
+          partial           → 维持
+          fail（连续≥2次）→ 降级（逐级，L1-L3 可降，L0 不可降）
+          skip              → 维持（consecutive_count 不变）
+
+    incoming_adjustments:
+      type: list[Adjustment]
+      required: false
+      default: []
+      comment: 子环传播来的调整，Act 阶段统一处理后再决定是否向上传播
+
+    propagate_to:
+      type: enum
+      values: [self, parent, both]
+      required: false
+      default: self
+      comment: 调整传播方向
+
+    next_cycle_id:
+      type: string | null
+      required: false
+      default: null
+      comment: |
+        下一环的 CycleUnit ID，null 则闭环结束。
+        引用而非嵌套，避免文件膨胀。
+
+    lesson_learn_ref:
+      type: string | null
+      required: false
+      default: null
+      comment: |
+        对应 task-card §十 经验教训字段。
+        Act 阶段结束时写入经验教训引用路径。
+        未填不算关闭（task-card §十 必填）。
+
+  # ── 元数据字段 ────────────────────────────────────────
+  metadata:
+    created_at:
+      type: timestamp
+      required: true
+      comment: 创建时间（UTC）
+
+    updated_at:
+      type: timestamp
+      required: true
+      comment: 更新时间（UTC），每次 save 自动更新
+
+    version:
+      type: integer
+      required: true
+      default: 1
+      comment: 版本号，每次 save 自动递增（用于快照归档）
+
+    global_max_cycles:
+      type: integer
+      required: true
+      default: 100
+      comment: 全局安全上限（防无限循环）
+
+---
+
+# 子结构定义
+
+CriterionResult:
+  criterion:
+    type: string
+    required: true
+    comment: 对应 acceptance_criteria 中的原文
+
+  result:
+    type: enum
+    values: [pass, fail, skip]
+    required: true
+    comment: 单项核对结果
+
+  evidence_ref:
+    type: string | null
+    required: false
+    comment: 该项对应的证据引用
+
+Adjustment:
+  type:
+    type: string
+    required: true
+    comment: 调整类型（level_change / maintain / scope_change）
+
+  from:
+    type: string | null
+    required: false
+    comment: 原值（如 L3）
+
+  to:
+    type: string | null
+    required: false
+    comment: 新值（如 L4；maintain 时与 from 相同）
+
+  reason:
+    type: string
+    required: true
+    comment: 调整原因（含触发规则描述，如 "consecutive_pass=3 → 升级"）
+
+  consecutive_count_snapshot:
+    type: integer
+    required: false
+    comment: 写入时的连续计数快照，用于审计
+
+---
+
+# 字段约束说明
+
+constraints:
+  # 标识与结构
+  - id 格式必须为 {scope}-{timestamp}-{random}
+  - task_card_id 必须指向已存在的 task-card 文件
+  - scope 值决定 CycleUnit 的层级和调度频率
+  - phase 转换必须按 plan→do→check→act→plan 顺序，非法转换须拒绝并写告警
+
+  # 子环约束
+  - do.children 中的 scope 必须小于或等于父环 scope
+  - 子环 review_level 不得低于 max(parent_review_level - 1, L0)
+    （review_level 从 task-card 读取，见 pdca-check-protocol v1.2 §3.7）
+
+  # Check 阶段约束
+  - check.verdict 为 null 时表示 Check 阶段未完成，不得进入 Act
+  - acceptance_criteria 从 task-card §五 读取，空列表触发默认值 L2（见 protocol §3.7）
+  - verdict=skip 对应 review_level=L0（免审）
+  - verdict=skip 时 Act 阶段仍须调用 adjust_automation_level()，不得跳过
+  - verdict=skip 时 consecutive_count 不变，act.adjustments 须写入 type=maintain 记录
+
+  # Human Review 约束（级别定义：L0=免审，L3=全量）
+  - plan.human_approval_required=true 时，check.human_review 块必须存在
+  - review_level=L3 时，plan.human_approval_required 必须为 true
+  - review_level=L0/L1/L2 时，plan.human_approval_required 为 false
+    （L2 抽中时动态触发，不通过设计时声明）
+  - L2→L3 升级须 Harold 确认（升级到全量人工级别）
+  - L1→L0 降级不存在（L0 是免审底线，不可再降）
+
+  # 循环上限
+  - plan.max_cycles 不能超过 metadata.global_max_cycles
+  - act.next_cycle_id 为 null 时表示闭环结束
+  - act.lesson_learn_ref 为 null 时表示未填写经验教训（task-card §十 必填）
+
+  # 扩展约束
+  - L0-L3 级别体系见 pdca-check-protocol v1.2 §3.5 + TMPL-TASK-CARD §五
+  - 任何新增级别须经治理流程审批，并同步更新 protocol、task-card 模板、automation-levels.yaml
+
+---
+
+# v1.2 → v1.3 核心变更
+
+| 变更类型 | 内容 |
+|----------|------|
+| 移除 plan.check_reference | 验收策略改为内存 review_context，不持久化 |
+| 级别体系对齐 | L0-L5 → L0-L3，引用 pdca-check-protocol v1.2 §3.5 |
+| constraints 更新 | 移除对 check_reference 的引用，改为引用 task-card |
+| 协议对齐 | 完全对齐 pdca-check-protocol v1.2 |
+
+---
+
+# v1.3 → v1.3-fixed 核心变更
+
+| 问题级别 | 修复内容 |
+|----------|----------|
+| **[P0] criteria_results comment** | 引用改为"从 task-card §五 读取" |
+| **[P0] skip 触发条件** | L5 → L0（免审） |
+| **[P1] human_approval_required 规则** | 补充 L0 免审规则 + L3 全量规则 |
+| **[P1] fail 降级范围** | L1-L5 → L1-L3（L0 不可降） |
+| **[P2] task_card_path 继承** | 从 v1.2 继承，便于直接加载 |
+| **[P2] blocked_reason 继承** | 从 v1.2 继承，status=blocked 时记录原因 |
+| **[P2] lesson_learn_ref 继承** | 从 v1.2 继承，对应 task-card §十 |
+| **级别定义反转修正** | L0=免审，L3=全量（与 task-card §五 对齐） |
+
+---
+
+# 版本历史
+
+| 版本 | 日期 | 变更说明 |
+|------|------|----------|
+| v1.0 | 2026-04-05 | 基于 ARCH v1.4.2 + pdca-check-protocol v1.1 初始版本 |
+| v1.1 | 2026-04-05 | 评审修复：parent_review_level、skip 行为、空列表处理、L2 reviewer、L1→L0 确认、扩展治理 |
+| v1.2 | 2026-04-05 | 关注点分离：CycleUnit 聚焦状态跟踪，task-card 为唯一真相源；do 改为引用模式 |
+| v1.3 | 2026-04-05 | 对齐 protocol v1.2：移除 plan.check_reference，级别体系 L0-L3 |
+| v1.3-fixed | 2026-04-05 | Claude 评审修复：P0/P1/P2 问题 + 继承 v1.2 字段 + 级别定义反转修正 |
+| v1.4 | 2026-04-16 | 新增 parent_cycle_id 字段，支持子环过滤（BUG-004 修复依赖） |
+
+---
+# v1.3-fixed · 2026-04-05 · T1.1 CycleUnit Schema — 状态跟踪层（Claude 评审通过）

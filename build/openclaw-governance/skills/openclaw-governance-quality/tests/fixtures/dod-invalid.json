@@ -1,0 +1,11 @@
+{
+  "task_id": "TEST-002",
+  "criteria": [
+    {
+      "id": "DOD-1",
+      "description": "缺少必填字段",
+      "required": true,
+      "met": false
+    }
+  ]
+}

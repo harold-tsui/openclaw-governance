@@ -1,0 +1,74 @@
+{
+  "owner": "openclaw-governance",
+  "slug": "openclaw-governance-task",
+  "displayName": "openclaw-governance-task",
+  "latest": {
+    "version": "6.0.2",
+    "publishedAt": 1744819200000,
+    "commit": ""
+  },
+  "templates": {
+    "dir": "templates",
+    "task_card": "templates/TMPL-TASK-CARD-任务卡片模板.md",
+    "onboarding_task_card": "templates/TMPL-ONBOARDING-TASK-CARD.md",
+    "training_task_card": "templates/TMPL-TRAINING-TASK-CARD.md",
+    "retire_task_card": "templates/TMPL-RETIRE-TASK-CARD.md"
+  },
+  "history": [
+    {
+      "version": "6.0.2",
+      "publishedAt": 1744819200000,
+      "changes": "§3.5 review_deliverable() 补充 PDCA Harness 联动说明"
+    },
+    {
+      "version": "6.0.1",
+      "publishedAt": 1744070400000,
+      "changes": "知识沉淀触发规则修正（3工作日宽限期，不阻塞关闭但阻塞归档）"
+    },
+    {
+      "version": "6.0.0",
+      "publishedAt": 1744070400000,
+      "changes": "大版本重构：对齐 TMPL-TASK-CARD v3.1；补充 Zone A/B/C 三区引用；新增 archive_task()；review_deliverable() 补充 L0-L3 路由表"
+    },
+    {
+      "version": "5.0.0",
+      "publishedAt": 1743984000000,
+      "changes": "大版本重构：初始完整版本"
+    },
+    {
+      "version": "3.5.0",
+      "publishedAt": 1743552000000,
+      "changes": "新增 §二 约束规则（引用 ZT-2026-005），包含工作层次、输入物管理、交付物生命周期、模板管理、评审闭环、待办跟踪"
+    },
+    {
+      "version": "3.4.0",
+      "publishedAt": 1743465600000,
+      "changes": "新增 templates 目录，集成任务相关模板"
+    },
+    {
+      "version": "3.3.0",
+      "publishedAt": 1742774400000,
+      "changes": "新增引用 governance-hierarchy、governance-heartbeat、governance-delegation"
+    },
+    {
+      "version": "3.2.0",
+      "publishedAt": 1742688000000,
+      "changes": "约束条件放入函数定义；新增项目目录查询流程"
+    },
+    {
+      "version": "3.1.0",
+      "publishedAt": 1742083200000,
+      "changes": "明确职责分离：流程/约束在 skill，记录在 Task-CARD"
+    },
+    {
+      "version": "3.0.0",
+      "publishedAt": 1741651200000,
+      "changes": "完善闭环治理流程"
+    },
+    {
+      "version": "1.0.0",
+      "publishedAt": 1741564800000,
+      "changes": "初始版本"
+    }
+  ]
+}

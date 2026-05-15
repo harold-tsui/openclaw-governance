@@ -1,0 +1,145 @@
+{
+  "owner": "openclaw-governance",
+  "slug": "openclaw-governance-core",
+  "displayName": "openclaw-governance-core",
+  "latest": {
+    "version": "6.1.8",
+    "publishedAt": 1745020800000,
+    "changes": "N4-P1-T07 T05 — 新增 §八 命令规范索引（引用 core/commands.md）；新增 templates/gov-state.json 状态模板"
+  },
+  "name": "openclaw-governance-core",
+  "version": "6.1.8",
+  "gov_path": "${OPENCLAW_GOV_PATH}",
+  "gov_version": "current",
+  "workspace": "${OPENCLAW_LOCAL_WORKSPACE}",
+  "updated": "2026-04-18",
+  "history": [
+    {
+    "version": "6.1.8",
+    "publishedAt": 1745020800000,
+    "changes": "N4-P1-T07 T05 — 新增 §八 命令规范索引（引用 core/commands.md）；新增 templates/gov-state.json 状态模板"
+    },
+    {
+      "version": "6.1.7",
+      "publishedAt": 1745020800000,
+      "changes": "N4-P1-T07 T03 — 新增 §3.5 PDCA-A 正确理解（Harold 修正）：A 之后进入下一循环，P/D/C 根据提升要求重新定义"
+    },
+    {
+      "version": "6.1.6",
+      "publishedAt": 1745020800000,
+      "changes": "Phase 3 新增 governance-knowledge（Step 7a，知识沉淀出口）；Skill 注册表补全 knowledge；级联降级计数 6→7"
+    },
+    {
+      "version": "6.1.5",
+      "publishedAt": 1776470400000,
+      "changes": "清理治理核心 config 目录遗留文件，修复过期备份路径引用，修复 frontmatter 版本对齐"
+    },
+    {
+      "version": "6.1.4",
+      "publishedAt": 1744934400000,
+      "changes": "清理治理核心 config 目录遗留文件，修复过期备份路径引用"
+    },
+    {
+      "version": "6.1.3",
+      "publishedAt": 1744070400000,
+      "changes": "修复 Claude Sonnet 4.6 评审的 2 个阻塞问题"
+    },
+    {
+      "version": "6.1.0",
+      "publishedAt": 1744070400000,
+      "changes": "Phase boot sequence、屏障系统统一"
+    },
+    {
+      "version": "6.0.0",
+      "publishedAt": 1743984000000,
+      "changes": "治理框架 Skill 化架构迁移"
+    }
+  ],
+
+  "system_content": {
+    "declares": [
+      {
+        "type": "project",
+        "id": "SYS-GOV",
+        "file": "config/system/system-projects.yaml",
+        "auto_create": false,
+        "status": "active",
+        "description": "治理框架系统项目"
+      }
+    ],
+    "loads": [
+      {
+        "type": "projects",
+        "file": "config/system/system-projects.yaml",
+        "scope": "system",
+        "description": "系统级项目注册表"
+      },
+      {
+        "type": "tasks",
+        "file": "config/system/system-tasks.yaml",
+        "scope": "system",
+        "description": "系统级任务注册表"
+      },
+      {
+        "type": "topics",
+        "file": "config/system/system-topics.yaml",
+        "scope": "system",
+        "description": "系统级主题注册表"
+      },
+      {
+        "type": "agents",
+        "file": "config/system/agents.yaml",
+        "scope": "system",
+        "description": "系统级 Agent 注册表"
+      },
+      {
+        "type": "skills",
+        "file": "config/system/skills.yaml",
+        "scope": "system",
+        "description": "Skill 注册表"
+      },
+      {
+        "type": "projects",
+        "file": "config/user/user-projects.yaml",
+        "scope": "user",
+        "description": "用户级项目注册表"
+      },
+      {
+        "type": "tasks",
+        "file": "config/user/user-tasks.yaml",
+        "scope": "user",
+        "description": "用户级任务注册表"
+      },
+      {
+        "type": "topics",
+        "file": "config/user/user-topics.yaml",
+        "scope": "user",
+        "description": "用户级主题注册表"
+      },
+      {
+        "type": "persons",
+        "file": "config/user/persons.yaml",
+        "scope": "user",
+        "description": "人员数据"
+      }
+    ]
+  },
+
+  "files": {
+    "templates_dir": "templates",
+    "tmpl_agents_sub": "templates/TMPL-AGENTS-SUB.md",
+    "tmpl_agent_manual": "templates/TMPL-AGENT-MANUAL.md",
+    "tmpl_identity_main": "templates/TMPL-IDENTITY-MAIN.md",
+    "tmpl_identity_sub": "templates/TMPL-IDENTITY-SUB.md",
+    "tmpl_soul_sub": "templates/TMPL-SOUL-SUB.md",
+    "tmpl_tools_sub": "templates/TMPL-TOOLS-SUB.md",
+    "tmpl_mission_board": "templates/TMPL-MISSION_BOARD.md",
+    "tmpl_emergency_stop": "templates/TMPL-EMERGENCY-STOP.md",
+    "tmpl_skill": "templates/TMPL-SKILL.md",
+    "tmpl_tools": "templates/TMPL-TOOLS.md",
+    "tmpl_user_sub": "templates/TMPL-USER-SUB.md"
+  },
+  "test_status": "pass",
+  "test_cases": 24,
+  "test_date": "2026-04-18"
+}

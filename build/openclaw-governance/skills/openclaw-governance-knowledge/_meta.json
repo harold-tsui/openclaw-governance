@@ -1,0 +1,22 @@
+{
+  "owner": "openclaw-governance",
+  "slug": "openclaw-governance-knowledge",
+  "displayName": "openclaw-governance-knowledge",
+  "latest": {
+    "version": "1.1.0",
+    "publishedAt": 1742774400000,
+    "commit": ""
+  },
+  "history": [
+    {
+      "version": "1.1.0",
+      "publishedAt": 1742774400000,
+      "changes": "新增引用规范（ZT-2026-008）+ 知识增强路径 + 洞察飞轮模型 + enhance_knowledge() 函数"
+    },
+    {
+      "version": "1.0.0",
+      "publishedAt": 1742688000000,
+      "changes": "初始版本：知识管理能力（经验教训沉淀、决策库维护、知识共享）"
+    }
+  ]
+}

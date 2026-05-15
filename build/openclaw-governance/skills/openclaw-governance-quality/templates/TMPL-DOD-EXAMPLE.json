@@ -1,0 +1,93 @@
+{
+  "$schema": "./dod.schema.json",
+  "version": "1.0",
+  "criteria": [
+    {
+      "id": "DOD-1",
+      "category": "functional",
+      "description": "核心功能实现：用户可以通过 API 创建任务",
+      "required": true,
+      "status": {
+        "met": false
+      },
+      "automation_level": "L3"
+    },
+    {
+      "id": "DOD-2",
+      "category": "testing",
+      "description": "单元测试覆盖率 ≥ 80%",
+      "required": true,
+      "status": {
+        "met": false
+      },
+      "automation_level": "L4"
+    },
+    {
+      "id": "DOD-3",
+      "category": "documentation",
+      "description": "API 文档已更新到 docs/api/",
+      "required": true,
+      "status": {
+        "met": false
+      },
+      "automation_level": "L3"
+    },
+    {
+      "id": "DOD-4",
+      "category": "quality",
+      "description": "代码通过 ESLint 检查，无 error 级别问题",
+      "required": true,
+      "status": {
+        "met": false
+      },
+      "automation_level": "L5"
+    },
+    {
+      "id": "DOD-5",
+      "category": "security",
+      "description": "敏感数据已加密存储",
+      "required": true,
+      "status": {
+        "met": false
+      },
+      "automation_level": "L2"
+    }
+  ],
+  "quality_standards": [
+    {
+      "id": "QS-1",
+      "description": "所有设计决策有理由说明",
+      "checked": false
+    },
+    {
+      "id": "QS-2",
+      "description": "代码有类型注解（TypeScript）",
+      "checked": false
+    },
+    {
+      "id": "QS-3",
+      "description": "无 console.log 或调试代码残留",
+      "checked": false
+    },
+    {
+      "id": "QS-4",
+      "description": "变更已记录在 CHANGELOG",
+      "checked": false
+    }
+  ],
+  "metadata": {
+    "created_by": "coo",
+    "created_at": "2026-03-23T13:30:00+08:00",
+    "locked": true,
+    "locked_at": "2026-03-23T13:35:00+08:00",
+    "task_id": "T07-T03",
+    "automation_level": "L2"
+  },
+  "summary": {
+    "total_criteria": 5,
+    "required_criteria": 5,
+    "met_criteria": 0,
+    "all_required_met": false,
+    "completion_percentage": 0
+  }
+}

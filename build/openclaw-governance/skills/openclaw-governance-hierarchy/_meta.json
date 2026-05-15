@@ -1,0 +1,56 @@
+{
+  "owner": "openclaw-governance",
+  "slug": "openclaw-governance-hierarchy",
+  "displayName": "openclaw-governance-hierarchy",
+  "latest": {
+    "version": "2.5.0",
+    "publishedAt": 1744070400000,
+    "commit": ""
+  },
+  "templates": {
+    "dir": "templates",
+    "project_charter": "templates/TMPL-PROJECT-CHARTER-项目章程模板.md",
+    "topic_brief": "templates/TMPL-TOPIC-BRIEF-专题简报模板.md",
+    "registry_project": "templates/TMPL-REGISTRY-PROJECT.yaml",
+    "registry_task": "templates/TMPL-REGISTRY-TASK.yaml",
+    "registry_topic": "templates/TMPL-REGISTRY-TOPIC.yaml",
+    "closed_loop_topic": "templates/TMPL-CLOSED-LOOP-TOPIC-v2.0.md"
+  },
+  "history": [
+    {
+      "version": "2.5.0",
+      "publishedAt": 1744070400000,
+      "changes": "对齐 governance-config v1.2.0，改用按需加载"
+    },
+    {
+      "version": "2.4.0",
+      "publishedAt": 1744070400000,
+      "changes": "简化：移除启动加载规则，规范由 governance-core 统一加载"
+    },
+    {
+      "version": "2.2.0",
+      "publishedAt": 1710734400000,
+      "changes": "新增闭环治理 Topic 模板 v2.0（推广可选、持续跟踪风险分级）"
+    },
+    {
+      "version": "2.1.0",
+      "publishedAt": 1710734400000,
+      "changes": "新增 templates 目录，集成项目/主题相关模板"
+    },
+    {
+      "version": "2.0.0",
+      "publishedAt": 1710734400000,
+      "changes": "删除 create_task()；新增引用规范声明"
+    },
+    {
+      "version": "1.2.0",
+      "publishedAt": 1710734400000,
+      "changes": "新增注册表模板规范"
+    },
+    {
+      "version": "1.0.0",
+      "publishedAt": 1773643292000,
+      "changes": "初始版本"
+    }
+  ]
+}

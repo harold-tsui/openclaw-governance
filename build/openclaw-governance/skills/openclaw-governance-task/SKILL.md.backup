@@ -1,0 +1,871 @@
+---
+name: openclaw-governance-task
+description: |-
+  任务管理能力。
+  Activate: 用户消息匹配能力描述时自动加载（description匹配）
+  Contains: Task创建、分派、接收、执行、验收、关闭、归档全流程
+metadata:
+  version: "6.0.4"
+  level: L2
+  os:
+    - darwin
+    - linux
+  task_card_template: TMPL-TASK-CARD v3.1
+---
+
+# 工作流程与任务管理 · Skill
+
+Tags: #governance, #task-management, #workflow, #project, #topic
+
+> **触发模式**：描述匹配触发 + 模型主动 read()
+> **模板依赖**：`TMPL-TASK-CARD v3.1`（Zone A/B/C 三区分层架构）
+> **唯一真相源**：Task-Card §四 Deliverable 定义 → `determine_review()` 的唯一读取源
+
+---
+
+## 〇、概述与引用
+
+### 0.1 Task 定义与归属规则
+
+| Task 类型 | 归属规则 | 示例 |
+|---|---|---|
+| **业务 Task** | 所属 Project 的 Topic 下 | ZT-P001-T01-T01 |
+| **方法论 Task** | 所属 Project 的 Topic 下 | ZT-P008-T06-T01 |
+| **临时 Task** | `ZT-P-AGT-{agent}`（Agent 个人工作台） | ZT-P-AGT-cqo-T01 |
+| **孤儿 Task** | 无法归属时放入 `ZT-P000`（NUCLEUS 治理基础） | ZT-P000-T99 |
+
+### 0.2 规范引用
+
+本 Skill 依赖以下规范（由 governance-core 在会话启动时自动加载）：
+
+| 规范 | 路径 | 用途 |
+|---|---|---|
+| **ZT-2026-005** | `${OPENCLAW_GOV_PATH}/procedures/ZT-2026-005_工作流程与约束规则.md` | 工作流程、约束规则 |
+| **ZT-2026-007** | `${OPENCLAW_GOV_PATH}/policies/ZT-2026-007_交付物路径规范.md` | 交付物路径规范 |
+| **TMPL-TASK-CARD** | `${OPENCLAW_GOV_PATH}/templates/TMPL-TASK-CARD-任务卡片模板.md` | Task-Card 模板 v3.1 |
+
+> 规范在会话启动时由 governance-core Step 6 加载，本 Skill 可直接使用。
+> `${OPENCLAW_GOV_PATH}` = `.system/governance/current`（由 governance-core §一 定义）
+
+### 0.3 MISSION_BOARD 写穿透规则（强制）
+
+> **核心理念**：Task-CARD 是唯一真相源；MISSION_BOARD 是协调视图（写穿透缓存）。
+> 每次 Task 状态变更，必须在同一操作内同步更新 MISSION_BOARD，不允许延后。
+
+| 触发事件 | MISSION_BOARD 变更 | 对应函数 |
+|---------|-------------------|---------|
+| Task-Card 创建 | 新增条目，状态 `[ ]` | `create_task()` |
+| Task-Card accept | `[ ]` → `[P]` | `accept_task()` |
+| PDCA a() 完成 | 按 verdict 更新（pass→`[x]`，fail/partial→`[P]`） | nucleus A2 规则 |
+| Task 阻塞 | `[P]` → `[?]` | `block_task()` |
+
+**违反上述规则 = 本次操作未完成**，不允许以「稍后同步」为由跳过。
+
+---
+
+## 一、核心定义
+
+### 1.1 Task-Card 定义
+
+**Task-Card 是工单**，是记录传递工作的最核心载体。
+
+**职责**：记录一个工作从前因后果到结束关闭，以及关闭后知识沉淀的完整生命周期。
+
+**不应包含**：流程管理规范（流程、约束、定义在本 Skill 中描述）。
+
+**三区分层**（对应 TMPL-TASK-CARD v3.1）：
+
+| Zone | 性质 | 章节 | 更新时机 |
+|---|---|---|---|
+| **Zone A** | 任务定义 | §一～§六 | 创建时填写，基本不变 |
+| **Zone B** | 运行时状态 | §七～§八 | 执行中持续更新 |
+| **Zone C** | 后处理 | §九 | 关闭后异步完成 |
+
+### 1.2 角色定义
+
+> **字段对齐说明**：`指派人` = `Assigned By`，两者已合并为同一概念，Task-Card §一 和本 Skill 函数输入统一使用 `assignee`。
+
+| 角色 | 职责 | 可执行操作 |
+|---|---|---|
+| **提出人** | 发现问题、提出 Issue Ticket、跟踪关闭 | create_issue_ticket, track_issue, confirm_close |
+| **指派人**（Assigned By） | 分派任务、委托执行、跟踪完成、确认关闭 | create_task, assign_task, track_completion, close_task |
+| **Task PIC** | 接收/拒绝任务、执行任务、提交交付物 | accept_task, reject_task, execute_task, update_status |
+| **Reviewer** | 验收交付物 | review_deliverable |
+
+**默认规则**：
+- `Reviewer` 默认 = 指派人
+- Issue Ticket 的 `Reviewer` = 提出人
+- 委托任务的 `Reviewer` = 指派人
+- **提出人跟踪**：Issue Ticket 创建/接收/完成/关闭时必须通知提出人
+- **指派人跟踪**：委托任务创建/接收/完成时必须通知指派人
+
+### 1.3 任务类型
+
+| 类型 | 标记 | 说明 |
+|---|---|---|
+| 常规任务 | 📋 | 标准任务 |
+| 周期性任务 | 🔄 | 定期执行 |
+| 系统级任务 | 🔧 | 系统维护 |
+| 应急任务 | 🚨 | 紧急处理 |
+| 一次性任务 | ⚡ | 临时任务 |
+| **Issue Ticket** | 🎫 | 问题单，用于跨 Agent 问题传递（需测试+抽查双验证） |
+| **委托任务** | 📤 | Agent A 委托 Agent B 执行 |
+
+### 1.4 通用状态标记
+
+> **真相源**：HEARTBEAT.md 附录 A，本 Skill 引用，不重复定义。
+> **Task-Card 引用**：TMPL-TASK-CARD v3.1 §七 7.1 同步列出完整枚举。
+
+| 状态 | 标记 | 含义 |
+|---|---|---|
+| 待接收 | `[ ]` | 已创建，等待 Task PIC 接收 |
+| 执行中 | `[P]` | 已接收，执行中 |
+| 待验收 | `[V]` | 已提交，等待验收 |
+| 已完成 | `[x]` | 验收通过，已关闭 |
+| 归档 | `[archived]` | 知识沉淀完成，已归档 |
+| 阻塞 | `[?]` | 遇到阻塞，需解除后继续 |
+| 待决策 | `[!]` | 需要 Harold 决策后继续 |
+
+### 1.5 Issue Ticket 特殊状态
+
+> **来源**：ZT-P008-T02-D03 issue-ticket 类型规范
+> 以下状态是通用状态 `[P]`（执行中）的子状态，`[P]` 是上层状态，Issue 特殊状态在其内部细化。
+
+| 状态 | 标记 | 含义 |
+|---|---|---|
+| 分析中 | `[A]` | 进行根因分析 |
+| 修复中 | `[F]` | 执行修复 |
+| 待测试 | `[T]` | 修复完成，等待测试 |
+| 测试中 | `[TT]` | 测试进行中 |
+| 待抽查 | `[Q]` | 测试通过，等待抽查 |
+| 抽查中 | `[QQ]` | 抽查进行中 |
+| 待关闭 | `[C]` | 抽查通过，等待关闭 → 即将进入 `[x]` |
+
+**Issue Ticket 关闭条件**（`[C]` → `[x]` 的前提）：
+1. 根因分析完成
+2. 修复执行完成
+3. 测试通过
+4. 抽查期内无同类问题（1-2 周）
+5. 抽查报告确认通过
+
+### 1.6 状态流转图
+
+```
+通用流转：
+
+[ ] 待接收 ──accept──→ [P] 执行中 ──submit──→ [V] 待验收 ──approve──→ [x] 已完成
+     │                     │                      │                          │
+     │ reject              │ blocked              │ reject(fail/reject)       │ Zone C 触发
+     ↓                     ↓                      ↓                          ↓
+  回退分派            [?] 阻塞                 [P] 执行中            知识沉淀（3bd 宽限）
+                           │                                                  │
+                           └──resolve──→ [P] 执行中                          ↓
+                                                                       [archived] 归档
+
+Issue Ticket 子状态流转（在 [P] 内部）：
+
+[P] → [A] 分析中 → [F] 修复中 → [T] 待测试 → [TT] 测试中
+                                                    │
+                                                    ↓
+                                              [Q] 待抽查 → [QQ] 抽查中 → [C] 待关闭 → [x]
+```
+
+---
+
+## 二、约束规则
+
+### 2.1 工作结构层次
+
+```
+Project（项目）
+ └── Topic（主题）
+      └── Task（任务）
+           ├── Sub-Task（子任务）
+           └── Deliverables（交付物）
+```
+
+**核心原则**：高层级包含低层级，低层级不得脱离高层级独立存在。
+
+### 2.2 输入物管理
+
+> **核心原则**：无输入，不执行。每一份输出都必须能追溯到输入来源。
+
+| 规则 | 说明 |
+|---|---|
+| 最小引用单元 | Task（或 Task 的 Deliverable） |
+| 引用方式 | 通过 @ref 标注来源 Task 编号或 Deliverable 编号 |
+| 可接受的输入类型 | 上游 Task 的 Deliverable、Harold 的指令、外部数据（需标注来源与置信度） |
+
+**MUST**：
+- 每个 Task 启动前，PIC 必须确认输入物已就绪且状态为 Active
+- 输入物变更时，下游 Task PIC 必须收到通知并评估影响
+
+**MUST NOT**：
+- 引用状态为 Draft / Stale / Archived / Destroyed 的文件作为正式输入
+- 使用无法追溯来源的数据作为输入（零容忍）
+
+### 2.3 交付物生命周期
+
+| 流转 | 触发条件 | 执行人 | 审批人 |
+|---|---|---|---|
+| **Draft → Active** | 元数据齐全 + Quality Gate 通过 + 评审记录 | PIC | CDO |
+| **Active → Stale** | 90 天未更新，且无有效豁免记录 | 系统扫描 | CDO 确认 |
+| **Stale → Archived** | 进入 Stale 超 30 天未处理 | CTO 执行 | CDO 批准 |
+| **Archived → Active** | 内容更新 + 重新通过 Quality Gate | PIC | CDO |
+
+### 2.4 模板管理
+
+| 规则编号 | 规则内容 |
+|---|---|
+| TMPL-001 | 所有交付物模板由 CDO 领导的数据治理委员会统一创建和管理 |
+| TMPL-002 | 任何 Agent 无权私自创建模板 |
+| TMPL-003 | 新模板需求由使用方提出申请，经数据治理委员会评审通过后方可发布 |
+| TMPL-004 | 若某 Task 所需的模板尚未发布，该 Task 状态必须标记为 `[?]` 阻塞 |
+
+### 2.5 评审与反馈闭环
+
+| 规则编号 | 规则内容 |
+|---|---|
+| REV-001 | Harold 和银月有权对任何层级的工作发起评审 |
+| REV-002 | PIC 必须在收到评审意见后记录到 Task-Card §八 Harold 介入记录 |
+| REV-003 | PIC 必须针对评审意见制定改进措施并执行 |
+| REV-004 | 改进完成后，PIC 必须向评审人回复改进结果 |
+| REV-005 | 未响应的评审意见将被标记为 OVERDUE，计入 MISSION_BOARD.md |
+
+### 2.6 MISSION_BOARD 维护规则
+
+| 规则编号 | 规则内容 |
+|---|---|
+| MB-001 | 每个 Agent 必须维护自己的 MISSION_BOARD.md |
+| MB-002 | 所有未完成的 Task（含 Sub-Task）必须出现在 PIC 的 MISSION_BOARD.md 中 |
+| MB-003 | 所有未响应的评审意见必须出现在 PIC 的 MISSION_BOARD.md 中 |
+| MB-004 | 所有因无模板而阻塞的 Task 必须出现在 MISSION_BOARD.md 中 |
+
+---
+
+## 三、函数接口
+
+### 3.0 MISSION_BOARD 同步规则 ⭐ v6.0.2
+
+**核心原则**：所有 Task 状态变更必须同步 MISSION_BOARD。
+
+**同步规则**：
+
+| Task 状态变更 | MISSION_BOARD 同步动作 | 时限 |
+|---------------|------------------------|------|
+| `[ ]` → `[P]` | 从 §五 待处理 移到 §三 进行中区 | 立即 |
+| `[P]` → `[V]` | 从 §三 进行中区 移到 §四 待验收区 | 立即 |
+| `[V]` → `[x]` | 从 §四 待验收区 移到 §六 已完成区 | 立即 |
+| `[P]` → `[?]` | 在 §三 进行中区 标记阻塞，同时记录到 §七 阻塞区 | 立即 |
+| `[?]` → `[P]` | 从 §七 阻塞区 移除，恢复 §三 进行中区 | 立即 |
+| `[x]` → `[archived]` | 从 §六 已完成区 移到 §八 归档区 | 3工作日内 |
+
+**执行时机**：
+```python
+def sync_mission_board(task_id, old_state, new_state):
+    """每次 Task 状态变更时立即调用"""
+    # 读取 MISSION_BOARD
+    mb_path = f"60_Agents/{agent_id}/MISSION_BOARD.md"
+    
+    # 执行同步
+    if old_state == "[ ]" and new_state == "[P]":
+        move_task(mb_path, "§五", "§三", task_id)
+    elif old_state == "[P]" and new_state == "[V]":
+        move_task(mb_path, "§三", "§四", task_id)
+    elif old_state == "[V]" and new_state == "[x]":
+        move_task(mb_path, "§四", "§六", task_id)
+    elif old_state == "[P]" and new_state == "[?]":
+        mark_blocked(mb_path, "§三", task_id)
+        add_to_blocked_queue(mb_path, "§七", task_id)
+    
+    # 更新最后修改时间
+    update_timestamp(mb_path)
+```
+
+**验收检查**：
+- Heartbeat 每次执行时校验 Task-CARD 状态与 MISSION_BOARD 状态一致性
+- 不一致项 → 自动修复（以 Task-CARD 为准）
+
+---
+
+### 3.1 create_task()
+
+**职责**：创建任务并分派给 Task PIC，生成符合 TMPL-TASK-CARD v3.1 的 Task-Card（Zone A 预填，Zone B/C 留空）。
+
+**输入**：
+
+```json
+{
+  "action": "create_task",
+  "task_title": "任务标题",
+  "task_type": "常规|周期性|系统级|应急|一次性|Issue|委托",
+  "project_id": "ZT-P008",
+  "topic_id": "T06",
+  "assignee": "main",
+  "task_pic": "cqo",
+  "reviewer": "main",
+  "priority": "P0|P1|P2|P3",
+  "review_level": "L0|L1|L2|L3",
+  "task_goal": "目标描述",
+  "deliverables": [
+    {
+      "name": "交付物名称",
+      "filename": "FILENAME.md",
+      "format": ".md",
+      "review_level": "L2",
+      "acceptance_criteria": "验收标准"
+    }
+  ]
+}
+```
+
+> **字段说明**：
+> - `assignee`：指派人（原 `assigned_by`），与 Task-Card §一「指派人」字段对应
+> - `review_level`：任务级默认值，默认 L2；单项 Deliverable 可在 `deliverables[].review_level` 覆盖，空则继承
+> - `deliverables[].filename`：生成 Task-Card §四 Deliverable 表格「文件名」列必填
+> - `topic_id`：必填，用于确定 Task 归属目录
+
+**约束条件**：
+- `project_id`：必须在 system-projects.yaml 或 user-projects.yaml 中存在
+- `assignee`：必须指定
+- `task_pic`：必须指定
+- 目录路径：必须从项目配置的 `dir_path` 获取，不可自行拼接
+
+**校验流程**：
+
+```
+[Step 1] 查询项目配置
+    ├─ load_system("projects") → config/system/system-projects.yaml
+    ├─ load_user("projects")   → config/user/user-projects.yaml
+    ├─ 合并结果，user 级优先（同 project_id 时 user 覆盖 system）
+    └─ 根据 project_id 查找，获取 dir_path / charter_path / alias 等信息
+    ↓
+[Step 2] 校验项目存在
+    ├─ project_id 在合并结果中？
+    │   └─ 不存在 → E_PROJECT_NOT_FOUND
+    └─ dir_path 对应目录存在？
+        └─ 不存在 → E_PROJECT_DIR_NOT_FOUND
+    ↓
+[Step 3] 校验必填字段
+    ├─ assignee 存在？ → 不存在 → E_ASSIGNEE_MISSING
+    └─ task_pic 存在？ → 不存在 → E_PIC_MISSING
+    ↓
+[Step 4] 生成 Task ID
+    格式: {PROJECT_ID}-{TOPIC_ID}-T{TASK_NO}
+    ↓
+[Step 5] 创建目录
+    路径: {dir_path}/{topic_id}/tasks/
+    ↓
+[Step 6] 生成 TASK-CARD.md
+    依据 TMPL-TASK-CARD v3.1：
+    - Zone A（§一～§六）：按下表预填
+    - Zone B（§七～§八）：留空，等待执行时填写
+    - Zone C（§九）：留空，关闭后触发
+    ↓
+[Step 7] 更新 MISSION_BOARD（强制，不完成视 create_task 未完成）
+    在 PIC 的 MISSION_BOARD.md 新增条目，状态 `[ ]`
+    ↓
+[Step 8] 通知 Task PIC（飞书 DM）
+```
+
+**Task-Card Zone A 预填规则**：
+
+| Task-Card 字段 | 来源 |
+|---|---|
+| Task ID | Step 4 生成 |
+| Task 标题 | 输入 `task_title` |
+| 任务类型 | 输入 `task_type` |
+| 归属 Topic | 输入 `topic_id` + 项目配置查询 |
+| 归属 Project | 输入 `project_id` + 项目配置查询 |
+| Task PIC | 输入 `task_pic` |
+| 指派人 | 输入 `assignee` |
+| 优先级 | 输入 `priority` |
+| Review 级别 | 输入 `review_level`（默认 L2） |
+| §四 交付物根目录 | `{dir_path}/{topic_id}/deliverables/` |
+| §四 Deliverable 表格 | 输入 `deliverables` 数组，逐行填入（name/filename/format/review_level/acceptance_criteria） |
+
+**错误码**（create_task 专用）：
+
+| 错误码 | 说明 |
+|---|---|
+| E_PROJECT_NOT_FOUND | project_id 在 system-projects.yaml 及 user-projects.yaml 中均不存在 |
+| E_PROJECT_DIR_NOT_FOUND | dir_path 对应目录不存在 |
+| E_ASSIGNEE_MISSING | 未指定 assignee（指派人） |
+| E_PIC_MISSING | 未指定 task_pic |
+| E_PATH_INVALID | 路径格式错误（包含 "60_Agents/" 或不以 "10_Projects/" / ".system/" 开头） |
+
+**输出**：
+
+```json
+{
+  "status": "OK",
+  "task_id": "ZT-P008-T06-T01",
+  "task_card_path": "10_Projects/ZT-P008_Quality_Management/T06/tasks/TASK-CARD-ZT-P008-T06-T01.md",
+  "state": "[ ]",
+  "next_action": "等待 Task PIC 接收"
+}
+```
+
+---
+
+### 3.2 accept_task()
+
+**职责**：Task PIC 确认接收任务，状态从 `[ ]` 流转到 `[P]`。
+
+**输入**：
+
+```json
+{
+  "action": "accept_task",
+  "task_id": "ZT-P008-T06-T01",
+  "task_pic": "cqo"
+}
+```
+
+**约束条件**：
+- 只有指定的 `task_pic` 可以接收
+- 状态必须为 `[ ]`
+
+**错误码**：
+
+| 错误码 | 说明 |
+|---|---|
+| E_NOT_AUTHORIZED | 非 task_pic 无权接收 |
+| E_STATE_INVALID | 状态不是 `[ ]` |
+
+**执行步骤**：
+1. 更新 Task-CARD §三 状态为 `[P]`
+2. 填写 Zone B §七 执行摘要起始时间
+3. 更新 MISSION_BOARD 对应条目：`[ ]` → `[P]`（强制，不完成视 accept_task 未完成）
+
+**输出**：
+
+```json
+{
+  "status": "OK",
+  "state": "[P]",
+  "next_action": "开始执行，更新 Task-Card Zone B §七"
+}
+```
+
+---
+
+### 3.3 reject_task()
+
+**职责**：Task PIC 拒绝接收任务，状态保持 `[ ]`，通知指派人重新分派。
+
+**输入**：
+
+```json
+{
+  "action": "reject_task",
+  "task_id": "ZT-P008-T06-T01",
+  "task_pic": "cqo",
+  "reason": "拒绝原因"
+}
+```
+
+**约束条件**：
+- 只有指定的 `task_pic` 可以拒绝
+- 状态必须为 `[ ]`
+
+**输出**：
+
+```json
+{
+  "status": "OK",
+  "state": "[ ]",
+  "next_action": "已通知指派人重新分派"
+}
+```
+
+---
+
+### 3.4 create_issue_ticket()
+
+**职责**：创建问题单，用于跨 Agent 问题传递。
+
+**输入**：
+
+```json
+{
+  "action": "create_issue_ticket",
+  "issue_title": "问题标题",
+  "issue_description": "问题描述",
+  "issue_severity": "P0|P1|P2|P3",
+  "issue_reporter": "cto",
+  "task_pic": "cqo",
+  "project_id": "ZT-P008",
+  "source_task_id": "ZT-P008-T01-T001"
+}
+```
+
+**自动规则**：
+- `task_type` = 🎫 issue-ticket
+- `review_level` = 按 severity 分级：P0/P1 → L3（Harold 全量审批），P2 → L2（银月抽检），P3 → L1（银月自验收）
+- `reviewer` = `issue_reporter`（提出人）
+
+**对原 Task 影响**：
+- 原 Task 状态 → `[?]` 阻塞
+- 原 Task §七 阻塞原因填写关联 Issue ID
+- 原 Task §六.2 关键依赖新增本 Issue Task ID
+
+**输出**：
+
+```json
+{
+  "status": "OK",
+  "task_id": "ZT-P008-T07-T01",
+  "state": "[ ]",
+  "source_task_state": "[?]",
+  "next_action": "等待 Task PIC 接收，通知提出人已创建"
+}
+```
+
+---
+
+### 3.5 review_deliverable()
+
+**职责**：验收交付物，按 Deliverable 的 Review 级别路由到对应验收路径。
+
+**调用时机**：
+- **传统任务流**：Task PIC 提交后，Reviewer 主动调用（状态 `[V]` → 验收）
+- **PDCA Harness 驱动任务**：由 governance-nucleus PDCA Check 阶段**自动触发**（L2 抽检/L3 全量），不需 Reviewer 主动调用
+
+**读取源**：Task-Card §四 Deliverable 表格（`determine_review()` 唯一读取源）。
+
+**输入**：
+
+```json
+{
+  "action": "review_deliverable",
+  "task_id": "ZT-P008-T06-T01",
+  "deliverable_name": "交付物名称",
+  "reviewer": "harold",
+  "review_result": "pass|fail|reject",
+  "feedback": "反馈内容"
+}
+```
+
+> **review_result 说明**（对齐 governance-quality v3.2.0 枚举）：
+> - `pass`：验收通过
+> - `fail`：部分通过，需局部修订后重新提交（对应 quality 的 REVISE）
+> - `reject`：驳回，需全量返工后重新提交（对应 quality 的 REJECT）
+
+**Review 级别路由规则**（Review 级别从 Task-Card §四 对应 Deliverable 行读取）：
+
+| Review 级别 | 路由逻辑 | 实际验收人 |
+|---|---|---|
+| **L0** | 银月直接验收，Harold 不介入 | 银月 |
+| **L1** | Task PIC 标 `[V]` 正常流转；有疑虑标 `[!?]`，银月判断是否上报 | 银月（或升级至 Harold） |
+| **L2** | 银月抽样 20-30%；抽中标 `[!]` 进七区 Harold 审阅；未抽中银月直接流转 | 银月（抽中时 Harold） |
+| **L3** | Task PIC 标 `[!]`，银月录入 MISSION BOARD 七区，Harold 全量审阅 | Harold 必须介入 |
+
+**状态影响**：
+
+| review_result | Task-Card 状态 | 后续动作 |
+|---|---|---|
+| `pass` | 保持 `[V]` | 等待 close_task()；记录到 §八.1 |
+| `fail` | → `[P]` | Task PIC 局部修订后重新提交；记录到 §八.1 |
+| `reject` | → `[P]` | Task PIC 全量返工后重新提交；记录到 §八.1 |
+
+**错误码**：
+
+| 错误码 | 说明 |
+|---|---|
+| E_REVIEW_DENIED | 无权限验收此 Task |
+| E_STATE_INVALID | 状态不是 `[V]` |
+| E_REVIEW_LEVEL_MISMATCH | 验收人与 Review 级别规定的验收人不符 |
+
+---
+
+### 3.6 close_task()
+
+**职责**：关闭任务，状态从 `[V]` 流转到 `[x]`，并触发 Zone C 后处理队列。
+
+**输入**：
+
+```json
+{
+  "action": "close_task",
+  "task_id": "ZT-P008-T06-T01",
+  "closed_by": "harold"
+}
+```
+
+**约束条件**：
+- `closed_by` 必须等于 Task-Card §一「指派人」（`assignee`）字段值，否则 → `E_CLOSE_DENIED`
+- 所有 Deliverable 状态必须为 ✅（review_result = pass）
+- 关联 Issue 必须全部为 `[x]`
+- **知识沉淀不阻塞关闭**（对齐 TMPL-TASK-CARD v3.1 Zone C 规则）
+
+**关闭条件检查表**：
+
+| 条件 | 检查方式 | 未满足时 |
+|---|---|---|
+| 操作人权限 | `closed_by` == Task-Card §一 `assignee` | → E_CLOSE_DENIED |
+| 交付物验收 | Task-Card §四 所有 Deliverable 状态列 = ✅ | → E_REVIEW_INCOMPLETE |
+| Issue 已解决 | Task-Card §六.2 关联 Issue 全部 = `[x]` | → E_ISSUE_NOT_RESOLVED |
+| 知识沉淀 | **不检查**，关闭后自动触发 Zone C | — |
+
+**关闭后自动触发**：
+- Task-Card §九 `沉淀状态` 设为 `⏳ pending`
+- 宽限期：关闭时间 + 3 个工作日
+- 银月 Weekly Review 核查，超期提醒
+- 知识沉淀未完成 → 不进入 `[archived]` 状态（由 archive_task() 把关）
+
+**错误码**：
+
+| 错误码 | 说明 |
+|---|---|
+| E_CLOSE_DENIED | 无权限关闭：`closed_by` 不等于 Task-Card §一 `assignee` |
+| E_REVIEW_INCOMPLETE | 存在未验收通过的 Deliverable |
+| E_ISSUE_NOT_RESOLVED | 存在未关闭的关联 Issue |
+
+**输出**：
+
+```json
+{
+  "status": "OK",
+  "state": "[x]",
+  "closed_at": "2026-04-08T16:00:00+08:00",
+  "zone_c_triggered": true,
+  "knowledge_capture_deadline": "2026-04-11",
+  "next_action": "知识沉淀宽限期 3 个工作日，银月 Weekly Review 核查"
+}
+```
+
+---
+
+### 3.7 archive_task()
+
+**职责**：将已关闭任务归档，状态从 `[x]` 流转到 `[archived]`。知识沉淀完成是归档的唯一前置条件。
+
+**输入**：
+
+```json
+{
+  "action": "archive_task",
+  "task_id": "ZT-P008-T06-T01",
+  "archived_by": "yinyue"
+}
+```
+
+**归档条件检查**：
+
+| 条件 | 检查方式 | 未满足时 |
+|---|---|---|
+| 任务已关闭 | Task-Card §七.1 当前状态值 = `[x]` | → E_STATE_INVALID |
+| 知识沉淀完成 | Task-Card §九 `沉淀状态` = ✅ completed | → E_KNOWLEDGE_CAPTURE_INCOMPLETE |
+
+**归档动作**：
+1. 复制 Task-Card 到 `tasks/archive/TASK-CARD-{TASK_ID}_v{版本号}.md`
+2. MISSION_BOARD 移除本 Task 条目
+3. TOPIC-BRIEF Task 列表状态改为 `[archived]`
+
+**错误码**：
+
+| 错误码 | 说明 |
+|---|---|
+| E_STATE_INVALID | 任务状态不是 `[x]` |
+| E_KNOWLEDGE_CAPTURE_INCOMPLETE | 知识沉淀未完成，不可归档 |
+
+**输出**：
+
+```json
+{
+  "status": "OK",
+  "state": "[archived]",
+  "archive_path": "tasks/archive/TASK-CARD-ZT-P008-T06-T01_v1.0.md",
+  "archived_at": "2026-04-11T10:00:00+08:00"
+}
+```
+
+---
+
+### 3.8 verify_task_closed()
+
+**职责**：验证 Task 是否真正关闭（所有章节填写完整）。
+
+---
+
+### 3.9 verify_state_consistency() ⭐ v6.0.2
+
+**职责**：验证 Task-CARD 状态与 MISSION_BOARD 状态一致性。
+
+**输入**：
+```json
+{
+  "action": "verify_state_consistency",
+  "task_id": "ZT-P008-T06-T01"
+}
+```
+
+**处理**：
+```
+[Step 1] 读取 Task-CARD §七.1 当前状态值
+[Step 2] 读取 MISSION_BOARD 中该 Task 状态
+[Step 3] 比较两者是否一致
+    ├─ 一致 → OK
+    └─ 不一致 → 记录不一致项，返回修复建议
+[Step 4] 返回结果
+```
+
+**输出**：
+```json
+{
+  "status": "OK|INCONSISTENT",
+  "task_card_state": "[P]",
+  "mission_board_state": "[V]",
+  "inconsistency": "Task-CARD 为 [P]，MISSION_BOARD 为 [V]",
+  "suggested_fix": "统一更新为 [P]（以 Task-CARD 为准）"
+}
+```
+
+**自动修复规则**：
+- Heartbeat 每次执行时调用此函数
+- 发现不一致 → 自动同步（以 Task-CARD 为准，Task-CARD 是任务生命周期完整记录）
+- 记录修复日志到 Heartbeat 报告
+
+---
+
+**职责**：验证 Task 是否满足真正关闭条件，供 close_task() 调用前检查。
+
+```python
+def verify_task_closed(task_id):
+    # 1. 读取 Task-Card
+    task_card = read_file(f"tasks/TASK-CARD-{task_id}.md")
+
+    # 2. 检查 Zone B 状态（Task-Card §七 7.1 当前状态值）
+    if task_card.zone_b.section_7_1.current_state != "[V]":
+        raise StateError(f"E_STATE_INVALID: 当前状态为 {task_card.zone_b.section_7_1.current_state}，需为 [V]")
+
+    # 3. 检查 Zone A §四 所有 Deliverable 状态列
+    deliverables = task_card.zone_a.section_4.deliverables
+    for d in deliverables:
+        if d.status != "✅":
+            raise ReviewError(
+                f"E_REVIEW_INCOMPLETE: Deliverable [{d.name}] 状态为 {d.status}，需为 ✅"
+            )
+
+    # 4. 检查 Zone A §六.2 关联 Issue 状态
+    related_issues = task_card.zone_a.section_6_2.dependencies
+    for issue in related_issues:
+        if issue.type == "前置 Task" and issue.is_issue_ticket:
+            if issue.state != "[x]":
+                raise IssueError(
+                    f"E_ISSUE_NOT_RESOLVED: 关联 Issue [{issue.task_id}] 状态为 {issue.state}，需为 [x]"
+                )
+
+    # 5. 全部通过
+    return {
+        "verified": True,
+        "task_id": task_id,
+        "deliverables_checked": len(deliverables),
+        "issues_checked": len([i for i in related_issues if i.is_issue_ticket])
+    }
+```
+
+---
+
+## 四、生命周期闭环
+
+### 4.1 创建时闭环
+
+| 步骤 | 动作 | 执行人 | 渠道 | 内容 | 时机 |
+|---|---|---|---|---|---|
+| ① | 生成 Task-Card（Zone A 预填） | 指派人 | 本地文件 | TMPL-TASK-CARD v3.1 | 立即 |
+| ② | 更新 MISSION_BOARD §五 待处理队列 | 指派人 | 本地文件 | 新增 Task 条目，状态 `[ ]` | 立即 |
+| ③ | 通知 Task PIC | 指派人 | 会话/飞书 | "[TASK_ID] 已创建，请接收" | 立即 |
+| ④ | 通知指派人（确认已发送） | 系统 | 日志 | 发送记录 | 立即 |
+| ⑤（Issue Ticket 附加） | 通知提出人（issue_reporter） | 指派人 | 会话/飞书 | "[ISSUE_ID] 已创建，状态 `[ ]`" | 立即 |
+
+### 4.2 接收时闭环
+
+| 步骤 | 动作 | 执行人 | 渠道 | 内容 | 时机 |
+|---|---|---|---|---|---|
+| ① | Task-Card §七.1 状态改为 `[P]` | Task PIC | 本地文件 | 更新当前状态值 | 立即 |
+| ② | Task-Card §七.2 新增「接收」记录 | Task PIC | 本地文件 | Review 级别确认、依据 | 立即 |
+| ③ | 更新 MISSION_BOARD §三 进行中区 | Task PIC | 本地文件 | 状态改为 `[P]` | 立即 |
+| ④ | 通知指派人已接收 | Task PIC | 会话/飞书 | "[TASK_ID] 已接收，开始执行" | 立即 |
+| ⑤（Issue Ticket 附加） | 通知提出人（issue_reporter） | Task PIC | 会话/飞书 | "[ISSUE_ID] 已接收，状态 `[P]`" | 立即 |
+
+### 4.3 提交时闭环
+
+| 步骤 | 动作 | 执行人 | 渠道 | 内容 | 时机 |
+|---|---|---|---|---|---|
+| ① | Task-Card §七.1 状态改为 `[V]`（或 `[!]` for L3） | Task PIC | 本地文件 | 更新当前状态值 | 立即 |
+| ② | Task-Card §七.2 新增「提交」记录 | Task PIC | 本地文件 | 提交说明 | 立即 |
+| ③ | 更新 MISSION_BOARD | Task PIC | 本地文件 | 状态改为 `[V]` | 立即 |
+| ④ | 通知 Reviewer | Task PIC | 会话/飞书 | "[TASK_ID] 已提交，请验收" | 立即 |
+
+### 4.4 关闭时闭环
+
+| 步骤 | 动作 | 执行人 | 渠道 | 内容 | 时机 |
+|---|---|---|---|---|---|
+| ① | verify_task_closed() 全部通过 | 指派人 | 函数调用 | 前置检查 | 关闭前 |
+| ② | Task-Card §七.1 状态改为 `[x]` | 指派人 | 本地文件 | 更新当前状态值 | 立即 |
+| ③ | Task-Card §九 沉淀状态设为 `⏳ pending` | 系统自动 | 本地文件 | Zone C 触发 | 立即 |
+| ④ | 更新 MISSION_BOARD §六 已完成区 | 指派人 | 本地文件 | 状态改为 `[x]` | 立即 |
+| ⑤ | 通知 Task PIC | 指派人 | 会话/飞书 | "[TASK_ID] 已关闭" | 立即 |
+| ⑥（Issue Ticket 附加） | 通知提出人（issue_reporter） | 指派人 | 会话/飞书 | "[ISSUE_ID] 已关闭，状态 `[x]`" | 立即 |
+
+### 4.5 归档时闭环
+
+| 步骤 | 动作 | 执行人 | 渠道 | 内容 | 时机 |
+|---|---|---|---|---|---|
+| ① | 确认 §九 沉淀状态 = ✅ completed | 银月 | Weekly Review | 知识沉淀核查 | 宽限期内 |
+| ② | archive_task() 执行归档动作 | 银月 | 函数调用 | 复制 Task-Card / 更新 MISSION_BOARD / 更新 TOPIC-BRIEF | 立即 |
+| ③ | Task-Card 状态改为 `[archived]` | 银月 | 本地文件 | 更新当前状态值 | 立即 |
+
+---
+
+## 五、项目配置查询
+
+> 其他 Skill（如 governance-pipeline、governance-quality）需查询项目信息时，统一调用以下方式，不在各 Skill 内重复实现查询逻辑。
+
+**查询步骤**：
+
+```
+[Step 1] load_system("projects") → config/system/system-projects.yaml
+[Step 2] load_user("projects")   → config/user/user-projects.yaml
+[Step 3] 合并，user 级优先（同 project_id 时 user 覆盖 system）
+[Step 4] 根据 project_id 返回：dir_path / charter_path / alias / topics
+```
+
+**返回字段**：
+
+| 字段 | 说明 |
+|---|---|
+| `dir_path` | 项目根目录绝对路径（用于拼接所有子目录） |
+| `charter_path` | PROJECT-CHARTER.md 路径 |
+| `alias` | 项目别名（如 ZT-P008_Quality_Management） |
+| `topics` | 已注册的 Topic ID 列表 |
+
+**错误码**：
+
+| 错误码 | 说明 |
+|---|---|
+| E_PROJECT_NOT_FOUND | project_id 在两个配置文件中均不存在 |
+
+---
+
+## 版本历史
+
+| 版本 | 日期 | 变更类型 | 变更内容 |
+|---|---|---|---|
+| **v6.0.4** | 2026-04-18 | 逻辑修复 | §3.4 Issue Ticket review_level 按 severity 分级：P0/P1→L3（Harold 全量审批），P2→L2（银月抽检），P3→L1（银月自验收），避免低优先级 Issue 淹没 Harold |
+| **v6.0.3** | 2026-04-18 | 逻辑修复 | §3.9 修复 MISSION_BOARD 权威源矛盾：verify_state_consistency() 自动修复规则统一为"以 Task-CARD 为准"（Task-CARD 是完整生命周期记录，MISSION_BOARD 是投影） |
+| **v6.0.2** | 2026-04-16 | §3.5 review_deliverable() 补充 PDCA Harness 联动说明：PDCA Check L2/L3 自动触发，无需 Reviewer 主动调用 |
+| **v6.0.1** | 2026-04-08 | 修复 + 对齐 | ① §3.1 约束条件、校验流程 Step 1、错误码说明：`projects.yaml` → `system-projects.yaml / user-projects.yaml`，补充分层查询顺序（load_system + load_user，user 优先）；② §3.1 Zone A 预填表：移除旧名引用；③ §3.5 `review_result` 枚举对齐 governance-quality v3.1.0：`pass/fail/reject`（废弃 `partial`），状态影响表同步更新，`partial→[P]` 改为 `fail→[P]`，`fail→[P]` 改为 `reject→[P]`；④ §3.6 `close_task()` 补充 `closed_by == assignee` 校验逻辑，关闭条件检查表新增「操作人权限」行，错误码 `E_CLOSE_DENIED` 说明补全；⑤ §3.8 `verify_task_closed()` 补全截断的函数体（Zone B 状态检查 + §四 Deliverable 全量检查 + §六.2 关联 Issue 检查）；⑥ §0.2 规范引用路径统一改用 `${OPENCLAW_GOV_PATH}` 变量；⑦ 新增 §四 生命周期闭环（含 Issue Ticket 附加通知行）；⑧ 新增 §五 项目配置查询（独立函数，供其他 Skill 引用）；⑨ §1.6 状态流转图 `reject(fail/partial)` 改为 `reject(fail/reject)` |
+| **v6.0.0** | 2026-04-08 | 大版本重构 | 对齐 TMPL-TASK-CARD v3.1；补充 Zone A/B/C 三区引用；新增 archive_task()；review_deliverable() 补充 L0-L3 路由表；close_task() 移除知识沉淀阻塞；verify_task_closed() 初版；新增 §四.5 归档闭环 |
+| **v5.0.0** | 2026-04-07 | 大版本重构 | 初始完整版本 |
+
+---
+
+*版本：v6.0.4 | 更新：2026-04-18 | 变更：Issue Ticket review_level 按 severity 分级（P0/P1→L3，P2→L2，P3→L1）*
+
+## Related Skills
+- [[openclaw-governance-delegation]] - 授权与等级判定，任务执行决策
+- [[openclaw-governance-quality]] - 质量管控，任务验收标准
+- [[openclaw-governance-hierarchy]] - 层级管理，Project/Topic结构

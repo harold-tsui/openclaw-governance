@@ -1,0 +1,127 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Governance State Template",
+  "description": "governance skills 模块状态模板",
+  "version": "7.0.0",
+  "updated": "2026-04-22",
+  
+  "type": "object",
+  "required": ["modules", "timestamp", "phase"],
+  
+  "properties": {
+    "modules": {
+      "type": "object",
+      "description": "模块状态字典",
+      "properties": {
+        "core": {
+          "type": "string",
+          "enum": ["success", "degraded", "failed", "loading", "soft_failed"],
+          "description": "core 模块状态"
+        },
+        "config": {
+          "type": "string",
+          "enum": ["success", "degraded", "failed", "loading", "soft_failed"]
+        },
+        "dispatch": {
+          "type": "string",
+          "enum": ["success", "degraded", "failed", "loading", "soft_failed"]
+        },
+        "hierarchy": {
+          "type": "string",
+          "enum": ["success", "degraded", "failed", "loading", "soft_failed"]
+        },
+        "data": {
+          "type": "string",
+          "enum": ["success", "degraded", "failed", "loading", "soft_failed"]
+        },
+        "quality": {
+          "type": "string",
+          "enum": ["success", "degraded", "failed", "loading", "soft_failed"]
+        },
+        "delegation": {
+          "type": "string",
+          "enum": ["success", "degraded", "failed", "loading", "soft_failed"]
+        },
+        "task": {
+          "type": "string",
+          "enum": ["success", "degraded", "failed", "loading", "soft_failed"]
+        },
+        "heartbeat": {
+          "type": "string",
+          "enum": ["success", "degraded", "failed", "loading", "soft_failed"]
+        },
+        "knowledge": {
+          "type": "string",
+          "enum": ["success", "degraded", "failed", "loading", "soft_failed"]
+        },
+        "nucleus": {
+          "type": "string",
+          "enum": ["success", "degraded", "failed", "loading", "soft_failed"]
+        }
+      }
+    },
+    
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "状态更新时间（ISO 8601）"
+    },
+    
+    "phase": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4,
+      "description": "当前 Phase（1/2A/2B/3/4）"
+    },
+    
+    "barrier_locked": {
+      "type": "boolean",
+      "description": "屏障是否锁定"
+    },
+    
+    "barrier_snapshot": {
+      "type": "object",
+      "description": "屏障状态快照（锁定时有效）"
+    },
+    
+    "pending_updates": {
+      "type": "object",
+      "description": "待合并的状态更新（下一屏障生效）"
+    },
+    
+    "degraded_modules": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "降级模块列表"
+    },
+    
+    "failed_modules": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "失败模块列表"
+    }
+  },
+  
+  "examples": [
+    {
+      "modules": {
+        "core": "success",
+        "config": "degraded",
+        "dispatch": "success",
+        "hierarchy": "success",
+        "data": "degraded",
+        "quality": "degraded",
+        "delegation": "success",
+        "task": "success",
+        "heartbeat": "success",
+        "knowledge": "success",
+        "nucleus": "success"
+      },
+      "timestamp": "2026-04-22T23:37:00+08:00",
+      "phase": 3,
+      "barrier_locked": false,
+      "degraded_modules": ["config", "data", "quality"],
+      "failed_modules": []
+    }
+  ]
+}

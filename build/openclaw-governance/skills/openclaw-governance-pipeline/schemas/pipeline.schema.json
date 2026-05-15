@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://openclaw.ai/schemas/pipeline.schema.json",
+  "title": "Pipeline State",
+  "description": "流水线状态定义",
+  "type": "object",
+  "required": ["pipeline_id", "task_id", "weight", "steps"],
+  "properties": {
+    "pipeline_id": {
+      "type": "string",
+      "pattern": "^PL-",
+      "description": "流水线 ID"
+    },
+    "task_id": {
+      "type": "string",
+      "description": "关联任务 ID"
+    },
+    "weight": {
+      "type": "string",
+      "enum": ["Lightweight", "Medium", "Heavyweight", "Strategic"],
+      "description": "流水线权重"
+    },
+    "automation_level": {
+      "type": "string",
+      "enum": ["L0", "L1", "L2", "L3", "L4", "L5"],
+      "description": "自动化级别"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "创建时间"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "更新时间"
+    },
+    "current_step": {
+      "type": "string",
+      "description": "当前步骤"
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": ["triage", "checkpoint", "context", "audit", "planning", "approve", "execute", "review_gate", "complete", "archive"],
+            "description": "步骤 ID"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in_progress", "completed", "failed", "skipped"],
+            "description": "步骤状态"
+          },
+          "auto": {
+            "type": "boolean",
+            "description": "是否自动审批"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "output": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

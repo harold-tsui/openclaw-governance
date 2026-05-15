@@ -1,0 +1,816 @@
+---
+name: openclaw-governance-core
+description: |
+  核心运行机制 - Agent 启动引导、Skill 加载协议、失败处理。
+  Activate: Agent 启动时自动加载
+  Contains: 路径变量、Phase 启动序列、屏障规则、失败处理行为规范
+metadata:
+  version: "6.2.0"
+  level: "L1"
+  os: ["darwin", "linux"]
+  lastRefactor: "2026-04-04"
+  changes: [
+    "v6.2.0: 新增 §八 项目发现与 Agent 职责边界（Harold 指令：项目不可见 + Agent 越界工作）",
+    "v6.1.9: 注册表补充 nucleus + pipeline，删除已迁移的 infrastructure；Phase 4 删除 infrastructure 行；级联计数 7→8",
+    "v6.1.8: N4-P1-T07 T05 — 新增 §八 命令规范索引（引用 core/commands.md）；新增 templates/gov-state.json 状态模板",
+    "v6.1.7: N4-P1-T07 T03 — 新增 §3.5 PDCA-A 正确理解（Harold 修正）：A 之后进入下一循环，P/D/C 根据提升要求重新定义",
+    "v6.1.6: Phase 3 新增 governance-knowledge（Step 7a）；Skill 注册表补全 knowledge；级联降级计数从 6 → 7",
+    "v6.1.5: 修复 SKILL.md frontmatter 版本与 _meta.json 对齐",
+    "v6.1.4: 清理治理核心 config 目录遗留文件，修复过期备份路径引用",
+    "v6.1.3: 修复 Claude Sonnet 4.6 评审的 2 个阻塞问题",
+    "§三.2 FIX-1: PhaseBarrierLock 补充 unlock 机制（上下文管理器）",
+    "§三.2 FIX-2: snapshot.get(module, 'unknown') 改为返回 'failed'",
+    "v6.1.2: 状态一致性增强 - 解决 Claude Sonnet 4.6 评审问题",
+    "§三.2 新增状态快照锁定机制（屏障锁）",
+    "§三.4 明确 loading 超时状态归宿（soft_failed → failed）",
+    "§三.4 新增差异化超时阈值（Tier 分组）",
+    "§三.3 新增咨询型探针升级阈值机制"
+  ]
+---
+
+# Governance Core - 核心运行机制
+
+Tags: #governance, #core, #agent, #skill-loading, #bootstrap
+
+> Agent 启动时必须加载的核心治理能力。
+> **v6.0.0**: 分离设计与执行，保留运行时必需内容
+
+---
+
+## 一、核心路径变量
+
+| 变量 | 值 | 说明 |
+|------|-----|------|
+| `$OPENCLAW_GOV_PATH` | `.system/governance/current` | 治理文件运行目录 |
+| `$OPENCLAW_LOCAL_WORKSPACE` | 工作空间根目录 | Agent 工作区 |
+| `$OPENCLAW_WORKSPACE_SYSTEM` | `.system/governance/current` | 治理系统目录 |
+
+---
+
+## 二、Phase 启动序列（依赖驱动加载）
+
+```
+Phase 1：基础层（启动触发，串行）
+─────────────────────────────────
+Step 1  governance-core       无依赖
+Step 2  governance-config     depends: core ✅
+Step 3  governance-dispatch   depends: core ✅
+└─ 失败处理：
+   core 失败 → 终止启动（致命）
+   config 失败 → 降级到内置 defaults，记录警告，继续
+   dispatch 失败 → 终止启动（无法路由意图）
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【Phase 1 → Phase 2A 屏障】
+屏障条件：所有模块达到最终状态（success 或 degraded）
+屏障语义：硬屏障（必须等待所有模块完成，包括降级完成）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Phase 2A：依赖驱动加载·第一批（可并行）
+──────────────────────────────────────────
+Step 4a governance-hierarchy  depends: core ✅
+Step 4b governance-data       depends: core, config ✅
+└─ 失败处理：
+   hierarchy 失败 → 标记为 failed，记录错误，进入 Phase 2B 前广播状态
+   data 失败 → 标记为 degraded（只读模式），记录警告，进入 Phase 2B 前广播状态
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【Phase 2A → Phase 2B 屏障】
+屏障条件：
+  1. 所有 2A 模块达到最终状态（success / degraded / failed）
+  2. 广播 2A 健康状态快照给所有 2B 模块
+     - hierarchy_status: success|failed
+     - data_status: success|degraded|failed
+屏障语义：硬屏障 + 状态广播（2B 模块必须在初始化时读取快照）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Phase 2B：依赖驱动加载·第二批（可并行，等 2A 完成）
+────────────────────────────────────────────────────
+Step 5a governance-quality    depends: core, data ✅
+Step 5b governance-delegation depends: core, hierarchy ✅
+└─ 初始化要求：
+   quality 必须读取 data_status 快照，如 degraded 则进入只读审核模式
+   delegation 必须读取 hierarchy_status 快照，如 failed 则无法启动
+└─ 失败处理：
+   quality 失败 → 标记为 degraded，带警告继续（task 可创建，不可闭环）
+   delegation 失败 → 标记为 failed，阻止 task 加载（安全风险）
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【Phase 2B → Phase 3 屏障】（P0-3 增强：软降级检测）⭐
+屏障条件：
+  1. 所有 2B 模块达到最终状态（success / degraded / failed）
+  2. 检查阻塞条件：
+     - hierarchy == failed → 阻止 Phase 3（严重降级）
+     - delegation == failed → 阻止 Phase 3（安全风险）
+  3. **软降级检测**（新增）：
+     - hierarchy: 非 failed AND Project 树可读（检查配置文件完整性）
+     - delegation: 非 failed AND 授权规则文件完整（automation-levels.yaml 可读）
+     - quality: 非 failed（允许带警告通过，但需记录降级状态）
+  4. **未通过阻塞也未通过软降级 → 带 warning 继续**：
+     - hierarchy 非 failed 但 Project 树不完整 → degraded 继续，记录 warning
+     - delegation 非 failed 但授权规则不完整 → degraded 继续，记录 warning
+屏障语义：条件屏障（满足阻塞条件时终止；软降级不通过时 degraded 继续 + warning）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Phase 3：执行流程（意图/定时触发，串行）
+─────────────────────────────────────────
+Step 6  governance-task       depends: core, hierarchy, quality, data, delegation ✅
+Step 7  governance-heartbeat  depends: core, hierarchy, task ✅
+Step 7a governance-knowledge  depends: core, task ✅  # 知识沉淀出口（delegation §10.5 / nucleus §4.1）
+├─ 注册定时器：Phase 3 完成后立即注册
+└─ 首次执行：task 就绪后才允许触发
+└─ 失败处理：
+   task 失败 → heartbeat 不加载，记录错误
+   heartbeat 失败 → 不影响 task，记录错误
+   knowledge 失败 → 不影响主流程，记录警告（知识沉淀延迟执行）
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【Phase 3 → Phase 4 屏障】
+屏障条件：Phase 3 完成（无论成功或降级）
+屏障语义：软屏障（Phase 4 惰性加载，不影响主流程）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Phase 4：增强层（显式触发，惰性加载）
+─────────────────────────────────────
+Step 8  governance-evolution       depends: core, hierarchy, quality, config ✅
+└─ 触发时机：用户明确请求时才加载
+└─ 失败处理：单独失败，不影响其他层，记录警告
+└─ 重试策略：最多重试 2 次，失败后向用户报告
+```
+
+---
+
+## 三、Phase 屏障规则
+
+### 3.1 屏障类型定义
+
+| 屏障 | 类型 | 触发条件 | 强制行为 |
+|------|------|----------|----------|
+| **Phase 1→2A** | 硬屏障 | 所有 Phase 1 模块完成（含降级） | 必须等待，不可跳过 |
+| **Phase 2A→2B** | 硬屏障 + 状态广播 | 所有 2A 模块完成 + 广播健康快照 | 2B 必须读取快照后初始化 |
+| **Phase 2B→3** | 条件屏障 | hierarchy/delegation 非 failed | 阻塞条件满足时终止 Phase 3 |
+| **Phase 3→4** | 软屏障 | Phase 3 完成 | Phase 4 惰性加载，不影响主流程 |
+
+### 3.2 Phase 屏障完成语义（v6.1.0 新增）⭐
+
+> **核心定义**："完成" ≠ "成功"，降级状态也是一种"完成"
+
+| 模块状态 | 定义 | 是否算"完成" | 是否可进入下一 Phase |
+|----------|------|---------------|----------------------|
+| **success** | 模块正常加载，所有功能可用 | ✅ 是 | ✅ 可 |
+| **degraded** | 模块降级加载，部分功能受限 | ✅ 是 | ✅ 可（带警告） |
+| **failed** | 模块加载失败，不可用 | ✅ 是（但触发阻塞检查） | ❌ 视阻塞条件而定 |
+| **loading** | 模块正在加载 | ❌ 否 | ❌ 必须等待 |
+
+**降级容忍度上限**（v6.1.1 新增）：
+
+| Phase | 最大降级模块数 | 阻塞条件 |
+|-------|---------------|----------|
+| Phase 1 | 0 | 任一降级 → 终止（致命） |
+| Phase 2A | 1 | hierarchy 降级 → 阻塞 Phase 2B |
+| Phase 2B | 1 | delegation 降级 → 阻塞 Phase 3 |
+| Phase 3 | 2 | task + heartbeat 降级 → 警告继续 |
+
+**状态快照锁定机制**（v6.1.2 新增）⭐：
+
+> **解决问题**：P0-2 屏障检查时机竞态
+
+```python
+class PhaseBarrierLock:
+    """屏障状态快照锁定
+    
+    v6.1.3 修复：
+    - FIX-1: 补充 unlock 机制（上下文管理器）
+    - FIX-2: snapshot.get(module, 'unknown') 改为返回 'failed'
+    """
+    
+    def __init__(self):
+        self.snapshot = None
+        self.locked = False
+        self.lock_timestamp = None
+    
+    def lock_snapshot(self, module_states: dict) -> None:
+        """锁定状态快照，Phase 执行期间状态冻结"""
+        self.snapshot = module_states.copy()
+        self.locked = True
+        self.lock_timestamp = datetime.now()
+        # 通知所有模块：状态更新在下一屏障生效
+        broadcast("STATE_FREEZE", self.snapshot)
+    
+    def unlock_snapshot(self) -> None:
+        """释放锁，允许状态更新
+        
+        重要：必须在 Phase 完成后调用，否则系统进入永久状态冻结
+        """
+        self.snapshot = None
+        self.locked = False
+        self.lock_timestamp = None
+        # 通知所有模块：可以更新状态
+        broadcast("STATE_RELEASE", None)
+    
+    def __enter__(self):
+        """上下文管理器入口"""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """上下文管理器出口 - 无论正常还是异常退出，都释放锁
+        
+        这确保了 Phase 执行过程中即使抛出异常，锁也会被正确释放
+        """
+        self.unlock_snapshot()
+        return False  # 不吞异常，让异常继续传播
+    
+    def get_state(self, module: str) -> str:
+        """获取状态（Phase 执行期间返回快照值）
+        
+        v6.1.3 FIX-2: 返回 'failed' 而非 'unknown'
+        - 'unknown' 不在状态表（success/degraded/failed/loading）中
+        - 调用方收到 'failed' 后可明确处理
+        """
+        if self.locked and self.snapshot:
+            # FIX-2: 返回 'failed' 而非 'unknown'
+            return self.snapshot.get(module, "failed")
+        # 未锁定时返回实时状态
+        return get_realtime_state(module)
+
+# 使用示例（推荐方式）
+with PhaseBarrierLock() as barrier:
+    barrier.lock_snapshot(current_module_states)
+    execute_phase()  # Phase 执行过程中使用快照状态
+    # 离开 with 块时自动 unlock，异常也不例外
+```
+
+**屏障执行流程**（修改版）：
+
+```
+屏障检查时：
+    ↓
+1. 检查所有模块当前状态
+    ↓
+2. 锁定状态快照（Phase 执行期间冻结）
+    ↓
+3. Phase 开始执行（使用快照状态）
+    ↓
+4. 模块异步探针更新 → 写入内存 pending_updates 字典
+    ↓
+5. Phase 完成后释放锁
+    ↓
+6. 下一屏障检查时，pending_updates 合并到状态快照
+
+pending_updates 结构（内存字典，不持久化）：
+  {
+    "module_name": "new_status",  # e.g., {"quality": "failed"}
+    ...
+  }
+  - 写入时机：模块探针检测到状态变化时
+  - 生效时机：下一屏障检查时合并
+  - 清理时机：合并后立即清空
+```
+
+**示例**：
+- T0: 屏障检查，quality = degraded → 锁定快照
+- T1: quality 探针异步更新为 failed → 存入 pending
+- T2: Phase 2B 执行，使用快照（quality = degraded）
+- T3: Phase 2B 完成 → 释放锁
+- T4: 下一个屏障检查时，quality = failed（pending 生效）
+
+**降级状态传播规则**：
+
+```
+模块 A 降级 → 检查下游依赖
+    ↓
+if 下游模块 B 依赖 A 的降级功能:
+    B 也降级（传播）
+elif 下游模块 B 不依赖 A 的降级功能:
+    B 正常加载（不传播）
+```
+
+**示例**：
+- data 降级 → quality 降级（quality 依赖 data 的分级检查）
+- data 降级 → task 正常（task 不依赖 data 的核心功能）
+
+### 3.3 就绪探针机制（v6.1.0 新增）⭐
+
+> **核心理念**：加载完成 ≠ 就绪可用，需要显式探针验证
+
+| Skill | 探针检查项 | 就绪条件 |
+|-------|-----------|----------|
+| **core** | 路径变量解析 | 所有变量正确解析 |
+| **config** | 配置文件可读 | 文件存在 + 语法正确 |
+| **dispatch** | 路由表加载 | 至少有 1 条路由规则 |
+| **hierarchy** | Project 树配置文件完整性 | agents.yaml 可读 |
+| **data** | 数据分级文件可读 | data-classification.yaml 可读 |
+| **quality** | DOD 模板完整性 | TMPL-DOD.md 存在 |
+| **delegation** | 授权规则文件完整性 | automation-levels.yaml 可读 |
+| **task** | Task-CARD 模板存在 | TMPL-TASK-CARD.md 存在 |
+| **heartbeat** | 定时器注册状态 | 定时器已注册 |
+
+**探针角色定义**（v6.1.1 新增）：
+
+| 角色 | 阻塞行为 | 失败处理 | 示例 |
+|------|----------|----------|------|
+| **阻塞型** | 阻止 Phase 进入 | 记录错误，终止 | core 路径变量 |
+| **咨询型** | 不阻塞，记录警告 | 降级继续 | config 文件语法 |
+| **可选型** | 不阻塞，静默记录 | 忽略 | evolution 增强功能 |
+
+**咨询型探针升级机制**（v6.1.2 新增）⭐：
+
+```yaml
+advisory_probe_upgrade:
+  # 咨询型探针连续失败后升级为阻塞型
+  escalate_after_failures: 5
+  escalate_to: blocking
+  cooldown_period: 300s  # 成功后重置计数
+  # 持久化：计数器存储于 .system/governance/current/probe-failures.yaml
+  # 跨 isolatedSession 保持状态，探针成功时重置计数
+```
+
+**计数器持久化方案**：
+
+```yaml
+# .system/governance/current/probe-failures.yaml
+quality:
+  consecutive_failures: 3
+  last_success: 2026-04-16T09:00:00Z
+  last_failure: 2026-04-16T09:30:00Z
+
+示例:
+  quality 探针（咨询型）:
+    - 连续 5 次检查失败 → 升级为阻塞型
+    - 阻塞 Phase 3 进入
+    - 第 6 次成功 → 降级回咨询型，重置计数
+    - 计数器写入 .system/governance/current/probe-failures.yaml 跨会话持久化
+```
+
+**探针执行时机**：
+- Phase 屏障检查时执行
+- 模块声称"完成"后立即验证
+- 失败时记录具体原因，不静默失败
+
+### 3.4 loading 状态超时处理（v6.1.1 新增）⭐
+
+> **问题背景**：模块可能无限期停留在 loading 状态，导致启动挂起
+
+**超时配置**（v6.1.2 差异化阈值）⭐：
+
+| Tier | 模块 | 超时阈值 | 说明 |
+|------|------|----------|------|
+| **Tier 1** | core | 2s | 快速探针，应立即完成 |
+| **Tier 1** | dispatch | 3s | 路由表加载 |
+| **Tier 2** | config | 5s | 文件 I/O |
+| **Tier 2** | hierarchy | 8s | agents.yaml 解析 |
+| **Tier 2** | data | 5s | 文件 I/O |
+| **Tier 2** | delegation | 5s | 文件 I/O |
+| **Tier 3** | quality | 10s | 模板校验 |
+| **Tier 3** | task | 10s | 模板校验 |
+| **Tier 3** | heartbeat | 3s | 定时器注册 |
+
+| Phase | Tier 超时 | Phase 总超时 | 超时后行为 |
+|-------|-----------|--------------|------------|
+| Phase 1 | Tier 1 阈值 | 60s | 终止启动（无软失败，无重试） |
+| Phase 2A | Tier 2 阈值 | 90s | 标记 failed，继续评估 |
+| Phase 2B | Tier 2 阈值 | 90s | 标记 failed/degraded |
+| Phase 3 | Tier 3 阈值 | 120s | 警告，允许惰性加载 |
+
+> **Phase 1 特殊规则**：Phase 1 模块（core/config/dispatch）超时后直接 TERMINATE，不经过 soft_failed 状态，不允许重试。soft_failed 仅适用于 Phase 2+ 的非致命模块。
+
+**超时状态归宿定义**（v6.1.2 新增）⭐：
+
+> **解决问题**：loading 超时后进入什么状态
+
+```yaml
+on_loading_timeout:
+  # 超时后状态转换规则
+  state_transition:
+    initial: loading
+    first_attempt_timeout: soft_failed  # 第一次超时
+    retry_exhausted: failed              # 重试耗尽后
+    recoverable: true                    # soft_failed 可恢复
+    
+  # soft_failed 定义
+  soft_failed:
+    description: "超时但可能自愈"
+    retry_allowed: true
+    max_retries: 3
+    retry_interval: 5s
+    on_retry_success: degraded           # 重试成功后降级
+    on_retry_failure: failed             # 重试失败后彻底失败
+    
+  # failed 定义
+  failed:
+    description: "不可恢复"
+    triggers_blocking_check: true
+    retry_allowed: false
+```
+
+**状态转换图**：
+
+```
+loading ──[超时]──> soft_failed ──[重试成功]──> degraded
+    │                    │
+    │                [重试耗尽]
+    │                    ↓
+    └──────────────> failed
+```
+
+**超时与重试交互**（v6.1.2 明确）：
+
+```python
+def calculate_max_wait_time(module: str, tier_timeout: int, max_retries: int) -> int:
+    """计算最坏情况等待时间"""
+    # Tier 超时 × 重试次数 = 最坏等待
+    # 但有 Phase 总超时上限保护
+    return min(tier_timeout * max_retries, PHASE_TOTAL_TIMEOUT)
+
+示例:
+  hierarchy (Tier 2, 8s): max_wait = min(8s * 3, 90s) = 24s
+  quality (Tier 3, 10s): max_wait = min(10s * 3, 120s) = 30s
+```
+
+**超时恢复策略**：
+
+```yaml
+on_timeout:
+  phase_1:
+    action: TERMINATE
+    message: "核心模块加载失败，无法启动"
+    retry_allowed: false
+  
+  phase_2a:
+    action: EVALUATE_AND_CONTINUE
+    mark_failed_modules: true
+    broadcast_status: true  # 广播失败状态给下游
+  
+  phase_2b:
+    action: EVALUATE_AND_CONTINUE
+    check_blocking_conditions: true  # 检查是否阻塞 Phase 3
+  
+  phase_3:
+    action: WARN_AND_CONTINUE
+    allow_lazy_loading: true
+    retry_on_next_request: true
+```
+
+---
+
+### 3.5 PDCA-A 正确理解（Harold 修正）⭐ v6.1.7
+
+> **来源**：Harold Tsui 2026-04-15 指令，通过 BotLearn 的 Recheck 机制修正 PDCA-A 理解
+> **引用**：`10_Projects/ZT-P015_NUCLEUS-4-0/topics/N4-P1-T07/outputs/botlearn-design-analysis.md` §八
+
+**BotLearn 的理解**：A (Act) = Recheck（复测验证）— 安装改进方案后，重新执行 Benchmark 验证效果。
+
+**Harold 的修正**：A 之后**不仅是复测，而是进入下一个 PDCA 循环**。根据提升要求，P、D、C 的要求都可能不一样了。
+
+| PDCA 阶段 | BotLearn Recheck | 正确的 PDCA-A |
+|-----------|------------------|---------------|
+| **A (Act)** | Recheck（复测验证） | ✅ 复测 + 进入下一循环 |
+| **下一循环的 P** | 无变化（同样的 benchmark） | ⚠️ **根据提升要求重新 Plan** |
+| **下一循环的 D** | 无变化（同样的 exam） | ⚠️ **根据新 Plan 调整 Do** |
+| **下一循环的 C** | 无变化（同样的 report） | ⚠️ **根据新 D 调整 Check** |
+
+**举例**：Benchmark 发现"Memory" 维度得分低（10/20）
+```
+第一轮 PDCA：
+  P: 测试 Memory 能力
+  D: 回答 Memory 相关问题
+  C: 得分 10/20，发现问题
+  A: 安装 memory-enhancement skill
+
+第二轮 PDCA（不是简单重复第一轮）：
+  P: 测试 memory-enhancement 安装后的效果 + 探索其他维度
+  D: 回答 Memory 问题 + 测试新 skill 是否生效
+  C: 对比前后分数（10/20 → ?/20），评估改进效果
+  A: 根据新分数决定下一步（继续改进 / 已达标 / 换其他维度）
+```
+
+**核心要点**：
+1. **Act 不只是验证**，而是承上启下的转折点
+2. **下一循环的 P/D/C 必须根据提升要求重新定义**，不能简单重复上一轮
+3. **复测只是下一循环中 Check 的一部分**，不是全部
+4. **Plan 阶段必须读取上轮 Act 的条件/建议**，确保改进方向正确
+
+**对 NUCLEUS 的影响**：
+- PDCA 循环的 `a()` 阶段必须包含 `--next-task`（指向同一任务或新任务）
+- 下一循环的 `p()` 必须引用上轮 Act summary，说明"本轮相比上次做了什么不同"
+- 不允许连续 2 次 Do 阶段内容完全相同（`status=blocked` 除外）
+
+---
+
+## 四、失败处理行为规范
+
+### 4.1 单点失败（P0-3 增强：软降级状态）⭐
+
+| 失败节点 | 影响范围 | 降级策略 | 是否阻止 Phase 3 | 软降级检测 |
+|----------|----------|----------|------------------|------------|
+| **core** | 全部不可用 | 终止启动（致命） | ✅ 是 | - |
+| **config** | 依赖 config 的模块 | 降级到内置 defaults，记录警告 | ❌ 否 | 配置文件可读性检查 |
+| **dispatch** | 意图路由不可用 | 终止启动（无法路由） | ✅ 是 | - |
+| **hierarchy** | task/delegation/heartbeat | 严重降级，记录错误 | ✅ 是 | Project 树配置文件完整性 |
+| **data** | quality/task | 中度降级，只读模式 | ❌ 否（带警告） | 数据分级文件可读性 |
+| **quality** | task 闭环 | 轻度降级，带警告继续 | ❌ 否 | DOD 模板完整性 |
+| **delegation** | task 权限验证 | 阻止 task 加载（安全风险） | ✅ 是 | 授权规则文件完整性 |
+| **task** | heartbeat | heartbeat 不加载 | - | - |
+| **heartbeat** | 全局巡检 | 巡检中断，各 Agent 切换独立模式 | ❌ 否 | 定时器注册状态检查 |
+| **knowledge** | 知识沉淀/DL 更新 | 知识沉淀延迟，不影响主流程 | ❌ 否 | DL 文件完整性检查 |
+| **nucleus** | PDCA 执行引擎 | PDCA 暂停，不影响主流程 | ❌ 否 | heartbeat 触发检查 |
+
+**heartbeat 失败详细处理**（P1-5 新增）⭐：
+| 维度 | 说明 |
+|------|------|
+| **影响** | 巡检中断，各 Agent MISSION_BOARD 停止同步，失去全局协调 |
+| **降级行为** | 各 Agent 切换为独立判断模式（非协调模式），基于本地 MISSION_BOARD 执行 |
+| **恢复机制** | 下次 heartbeat 触发时自动重新同步（读取各 Agent MISSION_BOARD 状态） |
+| **通知策略** | 记录警告，不主动通知 Harold（由 Heartbeat 自身在下次成功时报告） |
+
+### 4.2 组合失败场景
+
+#### 4.2.1 组合失败传播矩阵（v6.1.1 可执行格式）⭐
+
+> **核心规则**：组合失败时，按优先级选择处理策略
+
+**可执行决策树**：
+
+```python
+def handle_combined_failure(failed_modules: list[str]) -> Decision:
+    """组合失败处理决策树"""
+    
+    # Rule 1: 安全优先
+    if "delegation" in failed_modules:
+        return Decision(
+            action="BLOCK_PHASE_3",
+            reason="delegation 失败影响权限验证",
+            severity="CRITICAL"
+        )
+    
+    # Rule 2: 架构优先
+    if "hierarchy" in failed_modules:
+        return Decision(
+            action="BLOCK_PHASE_3",
+            reason="hierarchy 失败影响 Project 树",
+            severity="HIGH"
+        )
+    
+    # Rule 3: 数据传播
+    if "data" in failed_modules and "quality" in failed_modules:
+        return Decision(
+            action="DEGRADE_BOTH",
+            reason="data 降级传播到 quality",
+            severity="MEDIUM",
+            impact=["只读模式", "闭环不可用"]
+        )
+    
+    # Rule 4: 独立降级
+    if "config" in failed_modules:
+        return Decision(
+            action="USE_DEFAULTS",
+            reason="config 失败使用内置默认值",
+            severity="LOW"
+        )
+    
+    return Decision(action="CONTINUE", reason="无阻塞条件")
+```
+
+**触发条件矩阵**：
+
+| 失败组合 | 触发条件 | 处理策略 | 阻塞 Phase 3 |
+|----------|----------|----------|-------------|
+| quality + delegation | `delegation.status == failed` | delegation 优先 | ✅ 是 |
+| hierarchy + data | `hierarchy.status == failed` | hierarchy 优先 | ✅ 是 |
+| config + data | `config.status == failed` | defaults + 只读模式 | ❌ 否 |
+| quality + data | `data.status == degraded` | data 优先传播 | ❌ 否（带警告） |
+| hierarchy + delegation | `hierarchy.status == failed` | hierarchy 优先 | ✅ 是 |
+| config + dispatch | `dispatch.status == failed` | Phase 1 TERMINATE（dispatch 致命，不进入 Phase 2+） | N/A（系统已终止） |
+
+**传播链示例**：
+
+```
+data 降级 → quality 降级（依赖 data）
+    ↓
+quality 降级 → task 可创建但不可闭环
+    ↓
+task 不降级，但功能受限
+```
+
+**级联降级雪崩检测**（v6.1.1 新增）：
+
+```python
+def detect_cascade_snowball(degraded_modules: list[str]) -> bool:
+    """检测级联降级是否超过阈值"""
+    DEGRADATION_THRESHOLD = 0.4  # 40% 模块降级
+    total_modules = 8  # Phase 2A+2B+3+L3 有效模块数（Phase 1 失败直接终止，不进入此检测）
+    # Phase 2A: hierarchy, data = 2
+    # Phase 2B: quality, delegation = 2
+    # Phase 3:  task, heartbeat, knowledge = 3
+    # L3: nucleus = 1
+    # 总计 = 8
+    
+    if len(degraded_modules) / total_modules > DEGRADATION_THRESHOLD:
+        return True  # 触发雪崩保护（>=3 个模块降级时触发）
+    return False
+
+# 雪崩保护：超过 40% 模块降级时，终止启动并报警
+```
+
+### 4.3 Phase 4 失败处理
+
+| 失败节点 | 触发场景 | 失败处理 | 重试策略 |
+|----------|----------|----------|----------|
+| **evolution** | 用户请求评估/改进 | 静默失败，记录警告，向用户报告 | 最多 2 次 |
+
+> 注：infrastructure 已迁移至 `skills/nucleus-tools/`，不再由治理核心管理。
+
+---
+
+## 五、Skill 注册表（精简）
+
+| Skill | 层级 | 触发类型 | 触发词 | 依赖 |
+|-------|------|----------|--------|------|
+| governance-core | L1 | 启动触发 | - | 无 |
+| governance-dispatch | L2 | 启动触发 | - | core |
+| governance-config | L2 | 启动触发 | "配置" | core |
+| governance-task | L2 | 意图触发 | "创建任务" | core, hierarchy, quality, data, delegation |
+| governance-heartbeat | L2 | 定时触发 | "heartbeat" | core, hierarchy, task |
+| governance-hierarchy | L2 | 意图触发 | "创建项目" | core |
+| governance-quality | L3 | 事件触发 | "审核" | core, data |
+| governance-data | L3 | 意图触发 | "数据分级" | core, config |
+| governance-delegation | L3 | 意图触发 | "授权" | core, hierarchy |
+| governance-knowledge | L2 | 事件触发 | "知识沉淀" | core, task, delegation |
+| governance-nucleus | L3 | heartbeat 触发 | - | core, heartbeat, delegation |
+| governance-pipeline | L4 | 显式触发 | "pipeline" | core |
+| governance-evolution | L4 | 显式触发 | "评估" | core, hierarchy, quality, config |
+
+> 注：infrastructure / intelligence / content / visual 已迁移至 `skills/nucleus-tools/`，不属于治理路由。
+
+---
+
+## 六、扩展文档（按需读取）
+
+> **关键**：不要只写"详见 README"，要明确触发条件
+
+| 场景 | 读取文档 | 章节 |
+|------|----------|------|
+| 需要理解依赖关系可视化 | `README.md` | §依赖图 |
+| 需要快速上手指南 | `README.md` | §快速上手 |
+| 需要理解设计决策原因 | `DESIGN.md` | §设计理念 |
+| 需要理解 Phase 屏障设计原因 | `DESIGN.md` | §屏障设计 |
+| 遇到未覆盖的组合失败场景 | `DESIGN.md` | §失败矩阵扩展 |
+| 查看版本演进记录 | `DESIGN.md` | §演进历史 |
+
+---
+
+## 七、永久性铁律
+
+> 这些铁律已 Skills 化到 `governance-core` §九，此处保留索引
+
+| 铁律 | 跟踪任务 |
+|------|----------|
+| 会话结束保存铁律 | MEMORY.md §9.1 |
+| Agent 约束原则 | MEMORY.md §9.2 |
+| 路径预填铁律 | MEMORY.md §9.3 |
+| 自动任务驱动原则 | MEMORY.md §9.4 |
+| Skill 加载入口铁律 | SYS-GOV-COORD-03 |
+| Task 闭环铁律 | MEMORY.md §9.6 |
+
+---
+
+## 八、项目发现与 Agent 职责边界 ⭐ v6.2.0
+
+> **来源**：Harold Tsui 2026-04-22 指令，修复两个运行时 bug：
+> - Bug 1：银月创建新项目后，其他 Agent 不知道
+> - Bug 2：Agent 对自己不拥有的项目开展项目工作（用户只是让修 bug）
+
+### 8.1 项目发现协议（Conversation-Start Reload）
+
+**`user-projects.yaml` 是用户级项目的唯一真相源。**
+
+> **问题**：项目数据由 `银月` 在两次对话之间创建/更新，其他 Agent 在后续会话中若不重新读取，将持有过期的项目列表，无法正确回答关于新项目的任何问题。
+
+**强制规则**：每个 Agent 在**每次对话开始时**必须执行：
+
+```
+# Step 1: 重新读取项目注册表
+read .system/governance/current/config/user/user-projects.yaml
+
+# Step 2: 同步系统级项目注册表（可选，变更频率低）
+read .system/governance/current/config/system-projects.yaml
+```
+
+**执行时机**：
+- 对话的第一条消息处理前执行
+- 不需要每个 heartbeat 周期都重新读取（仅对话开始时）
+- heartbeat 期间只更新 MISSION_BOARD，不需要重新读 yaml
+
+**为什么不在 heartbeat 中读取**：heartbeat 执行的是周期性的任务推进，项目列表在两次对话之间才可能变化，因此只需在对话开始时加载一次。
+
+### 8.2 Agent 职责边界（Project Ownership）
+
+**核心原则：Agent 只能对自己拥有的项目（含 Topic、Task）开展项目工作。**
+
+| 行为 | 对自己的项目 | 对他人的项目 |
+|------|-------------|-------------|
+| 提供技术建议/咨询 | ✅ 允许 | ✅ 允许 |
+| 修复 skill/script 代码 bug | ✅ 允许 | ✅ 允许 |
+| 创建 Task-CARD | ✅ 允许 | ❌ **禁止** |
+| 更新 MISSION_BOARD | ✅ 允许 | ❌ **禁止** |
+| 创建交付物（deliverables） | ✅ 允许 | ❌ **禁止** |
+| 启动 PDCA 循环 | ✅ 允许 | ❌ **禁止** |
+| 创建 Topic | ✅ 允许 | ❌ **禁止** |
+
+**判断项目归属**：
+
+```
+def can_work_on_project(project_id, topic_id, task_id, agent_id):
+    """判断 Agent 是否可以对某项目/Topic/Task 开展工作"""
+    # 1. 检查 user-projects.yaml / system-projects.yaml 中的 owner
+    if project.owner == agent_id:
+        return True  # 这是我的项目，可以工作
+    
+    # 2. 检查是否被分配为 PIC
+    if project.pic == agent_id or topic.pic == agent_id or task.pic == agent_id:
+        return True  # 我被分配为 PIC，可以工作
+    
+    # 3. 检查 members 列表
+    if agent_id in project.members:
+        return True  # 我是项目成员，可以工作
+    
+    return False  # 不是我的项目/Topic/Task，不能开展项目工作
+```
+
+**用户意图判断**：
+
+```
+if 用户说 "修 bug" / "发现问题" / "技术咨询":
+    # 用户可以要求任何 Agent 修复自己职责范围内的代码 bug
+    # 这不算是"开展项目工作"，而是技术支援
+    可以修复相关 skill/script 文件
+    不得创建 Task-CARD / 更新 MISSION_BOARD / 启动 PDCA
+
+elif 用户说 "开展项目" / "开始项目工作" / "创建任务":
+    if can_work_on_project(...):
+        正常推进项目
+    else:
+        回复: "该项目由 {owner} 负责，我可以提供技术建议但无权开展工作"
+```
+
+**MUST NOT**：
+- 不得在用户未明确要求的情况下，主动为他方项目创建任务或启动 PDCA
+- 不得以"帮 Harold 推进工作"为由，越界处理非自己负责的项目工作
+- 不得绕过项目归属检查，直接创建交付物
+
+**适用范围**：此规则同样适用于 Topic 和 Task 层级。
+
+---
+
+## 九、命令规范
+
+> **详细 Command Spec** 见 `core/commands.md`，定义了 governance core 的结构化命令格式。
+>
+> **核心命令速查**：
+> - `gov core bootstrap-agent --agent-id <id>` — Agent 启动序列
+> - `gov core load-skill --skill-name <name>` — 加载指定 Skill
+> - `gov core read-state` / `write-state` — 状态读写
+> - `gov core run-probe --module <name>` — 探针验证
+> - `gov core next-pdca-cycle --task-card-id <id>` — PDCA 下一循环
+
+---
+
+## 十、版本历史
+
+| 版本 | 日期 | 变更 |
+|------|------|------|
+| **6.2.0** | 2026-04-22 | 新增 §八 项目发现与 Agent 职责边界（Harold 指令：项目不可见 + Agent 越界工作）|
+| **6.1.9** | 2026-04-18 | §五 注册表补充 nucleus + pipeline，删除已迁移的 infrastructure；Phase 4 删除 infrastructure 行；级联计数 7 → 8；§四 Phase 3 补充 nucleus |
+| **6.1.8** | 2026-04-18 | N4-P1-T07 T05 — 新增 §八 命令规范索引（引用 core/commands.md）；新增 templates/gov-state.json 状态模板 |
+| **6.1.4** | 2026-04-15 | ⭐ 新增 §九 版本管理方式（废弃 versions/ 目录）|
+| **6.1.3** | 2026-04-04 | FIX-1/FIX-2：锁释放机制、unknown 状态处理 |
+| 6.1.2 | 2026-04-04 | 状态一致性：屏障锁机制、超时状态归宿、差异化阈值 |
+| 6.1.1 | 2026-04-04 | 评审改进：降级容忍度上限、探针角色、可执行矩阵、loading 超时 |
+| 6.1.0 | 2026-04-04 | P0 改进：Phase 屏障完成语义、就绪探针、组合失败传播矩阵 |
+| 6.0.0 | 2026-04-03 | 分离设计与执行，保留运行时必需内容 |
+| 5.8.0 | 2026-04-03 | 新增完整启动序列、失败处理矩阵 |
+| 5.7.1 | 2026-04-03 | 注册表修正（4 处错误） |
+| 5.7.0 | 2026-04-03 | 四层启动序列设计 |
+
+---
+
+## 十一、版本管理方式 ⭐ v6.1.4
+
+**当前方式**：
+- 所有规范版本通过 Git 历史管理
+- 不保留 `.system/governance/versions/` 目录
+- 每个规范文件的版本历史在文件底部记录
+
+**废弃方式**：
+- ~~`.system/governance/versions/`~~ （已于 2026-04-15 删除）
+- ~~多版本目录并存~~ （已废弃）
+
+**历史版本备份**：2026-04-15 的旧版本已归档，如需查阅历史版本，请使用 `git log --follow <file>` 查看 Git 历史。
+
+---
+
+*版本: 6.2.0 | 更新: 2026-04-22 | 变更: 新增 §八 项目发现协议 + Agent 职责边界（修复项目不可见 + 越界工作 bug）*
+
+## Related Skills
+- [[openclaw-governance-config]] - 配置管理技能，加载系统/用户配置文件
+- [[openclaw-governance-dispatch]] - 消息分拣与路由，与其他governance子技能协作

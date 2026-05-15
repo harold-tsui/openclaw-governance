@@ -1,0 +1,37 @@
+{
+  "owner": "openclaw-governance",
+  "slug": "openclaw-governance-quality",
+  "displayName": "openclaw-governance-quality",
+  "latest": {
+    "version": "3.2.0",
+    "publishedAt": 1744819200000,
+    "commit": ""
+  },
+  "history": [
+    {
+      "version": "3.2.0",
+      "publishedAt": 1744819200000,
+      "changes": "§1.0 明确 Review-Gate 职责边界 + §5.2 Harold 修正 PDCA 循环递进机制 + §5.3 新增 PDCA 循环递进机制"
+    },
+    {
+      "version": "3.1.0",
+      "publishedAt": 1744070400000,
+      "changes": "版本号修正 + §1.0 Review-Gate 边界补充"
+    },
+    {
+      "version": "3.0.0",
+      "publishedAt": 1742688000000,
+      "changes": "新增 DOD 机制、Review-gate，增加 templates/schemas/scripts/docs 目录"
+    },
+    {
+      "version": "2.0.0",
+      "publishedAt": 1742256000000,
+      "changes": "完善审核流程、新增问题管理、新增 PDCA 循环、新增质量指标"
+    },
+    {
+      "version": "1.0.0",
+      "publishedAt": 1742083200000,
+      "changes": "初始版本"
+    }
+  ]
+}

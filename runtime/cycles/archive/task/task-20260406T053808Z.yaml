@@ -1,0 +1,76 @@
+check:
+  evidence:
+  - data:
+      action: pdca_cycle_1
+      cycle_id: task-20260406T053808Z
+      metadata:
+        cycle_number: 1
+        deliverable_size: 5604
+        issues_found: 0
+      result: success
+      scope: task
+      timestamp: '2026-04-06T05:38:08.024186+00:00'
+    timestamp: '2026-04-06T05:38:08.024186+00:00'
+    type: execution_log
+  - data:
+      action: check_cycle
+      cycle_id: task-20260406T053808Z
+      metadata:
+        human_review_triggered: false
+        review_level: L2
+      result: pass
+      scope: task
+      timestamp: '2026-04-06T05:38:08.025589+00:00'
+    timestamp: '2026-04-06T05:38:08.025589+00:00'
+    type: execution_log
+  - data:
+      action: pdca_cycle_2
+      cycle_id: task-20260406T053808Z
+      metadata:
+        cycle_number: 2
+        deliverable_size: 5604
+        issues_found: 0
+      result: success
+      scope: task
+      timestamp: '2026-04-06T05:38:08.028275+00:00'
+    timestamp: '2026-04-06T05:38:08.028275+00:00'
+    type: execution_log
+  - data:
+      action: check_cycle
+      cycle_id: task-20260406T053808Z
+      metadata:
+        human_review_triggered: false
+        review_level: L2
+      result: pass
+      scope: task
+      timestamp: '2026-04-06T05:38:08.029617+00:00'
+    timestamp: '2026-04-06T05:38:08.029617+00:00'
+    type: execution_log
+  - data:
+      action: pdca_cycle_3
+      cycle_id: task-20260406T053808Z
+      metadata:
+        cycle_number: 3
+        deliverable_size: 5604
+        issues_found: 0
+      result: success
+      scope: task
+      timestamp: '2026-04-06T05:38:08.032790+00:00'
+    timestamp: '2026-04-06T05:38:08.032790+00:00'
+    type: execution_log
+  verdict: pass
+id: task-20260406T053808Z
+metadata:
+  created_at: '2026-04-06T05:38:08.032005+00:00'
+  cycle_number: 3
+  global_max_cycles: 100
+  review_level: L3
+  updated_at: '2026-04-06T05:38:08.033468+00:00'
+  version: 1
+phase: plan
+plan:
+  human_approval_required: false
+  max_cycles: 10
+  time_horizon_cycles: 10
+scope: task
+task_card_id: T0.1

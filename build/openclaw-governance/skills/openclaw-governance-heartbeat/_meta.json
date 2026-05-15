@@ -1,0 +1,73 @@
+{
+  "owner": "openclaw-governance",
+  "slug": "openclaw-governance-heartbeat",
+  "displayName": "openclaw-governance-heartbeat",
+  "latest": {
+    "version": "5.7.0",
+    "publishedAt": 1745020800000,
+    "commit": ""
+  },
+  "templates": {
+    "dir": "templates",
+    "heartbeat": "templates/TMPL-HEARTBEAT.md",
+    "heartbeat_sub": "templates/TMPL-HEARTBEAT-SUB.md",
+    "commands": "core/commands.md"
+  },
+  "history": [
+    {
+      "version": "5.7.0",
+      "publishedAt": 1745020800000,
+      "changes": "N4-P1-T07 T06 — 新增命令规范索引（引用 core/commands.md）；heartbeat 命令结构化定义"
+    },
+    {
+      "version": "5.6.0",
+      "publishedAt": 1744905600000,
+      "changes": "新增 Step 3 文件编辑强制要求（方案 A+B）"
+    },
+    {
+      "version": "5.5.0",
+      "publishedAt": 1744819200000,
+      "changes": "NUCLEUS 4.0 集成，Step 3a 调度器触发"
+    },
+    {
+      "version": "5.4.0",
+      "publishedAt": 1744819200000,
+      "changes": "Heartbeat-Task 绑定验证机制"
+    },
+    {
+      "version": "5.3.0",
+      "publishedAt": 1744070400000,
+      "changes": "状态字段规范新增 heartbeat-state.json 结构定义"
+    },
+    {
+      "version": "5.2.0",
+      "publishedAt": 1744070400000,
+      "changes": "模板版本统一至 v2.0"
+    },
+    {
+      "version": "5.1.0",
+      "publishedAt": 1744070400000,
+      "changes": "明确 Main/Sub 模板区分"
+    },
+    {
+      "version": "5.0.0",
+      "publishedAt": 1744070400000,
+      "changes": "重构为分布式 heartbeat + 决策自动化分级驱动"
+    },
+    {
+      "version": "4.3.1",
+      "publishedAt": 1710734400000,
+      "changes": "模板版本统一至 v2.0，精简版设计"
+    },
+    {
+      "version": "4.3.0",
+      "publishedAt": 1710734400000,
+      "changes": "明确 Main/Sub 模板区分，新增模板使用说明"
+    },
+    {
+      "version": "4.0.0",
+      "publishedAt": 1710734400000,
+      "changes": "重构为分布式 heartbeat"
+    }
+  ]
+}

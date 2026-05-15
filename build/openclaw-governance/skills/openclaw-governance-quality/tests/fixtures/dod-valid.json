@@ -1,0 +1,27 @@
+{
+  "task_id": "TEST-001",
+  "version": "1.0",
+  "created_by": "coo",
+  "created_at": "2026-03-23T12:00:00+08:00",
+  "locked": true,
+  "criteria": [
+    {
+      "id": "DOD-1",
+      "category": "functional",
+      "description": "功能测试通过",
+      "required": true,
+      "met": true,
+      "verified_by": "cqo",
+      "verified_at": "2026-03-23T14:00:00+08:00"
+    },
+    {
+      "id": "DOD-2",
+      "category": "documentation",
+      "description": "文档完整",
+      "required": true,
+      "met": true,
+      "verified_by": "cqo",
+      "verified_at": "2026-03-23T14:00:00+08:00"
+    }
+  ]
+}

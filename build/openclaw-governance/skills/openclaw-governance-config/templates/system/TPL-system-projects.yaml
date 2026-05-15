@@ -1,0 +1,8 @@
+# 系统级项目模板
+# 复制至 ${OPENCLAW_LOCAL_WORKSPACE}/.system/governance/current/config/system/system-projects.yaml
+
+version: "2.0"
+schema: "registry"
+type: "project"
+
+projects: []

@@ -1,0 +1,63 @@
+{
+  "owner": "openclaw-governance",
+  "slug": "openclaw-governance-data",
+  "displayName": "openclaw-governance-data",
+  "latest": {
+    "version": "4.0",
+    "publishedAt": 1744070400000,
+    "commit": ""
+  },
+  "scripts": [
+    "scripts/backup.sh",
+    "scripts/github_backup.sh",
+    "scripts/cloud_backup.sh",
+    "scripts/safe_delete.sh",
+    "scripts/restore_deleted.sh",
+    "validate.sh"
+  ],
+  "templates": {
+    "env_example": "scripts/.env.example"
+  },
+  "history": [
+    {
+      "version": "4.0",
+      "publishedAt": 1744070400000,
+      "changes": "简化策略：全量备份为主，排除敏感数据和日志文件；版本号统一为 4.0"
+    },
+    {
+      "version": "2.5.0",
+      "publishedAt": 1743465600000,
+      "changes": "核心策略新增：全量/增量备份策略定义、三维矩阵"
+    },
+    {
+      "version": "2.4.0",
+      "publishedAt": 1743379200000,
+      "changes": "增加备份脚本自动调用规则"
+    },
+    {
+      "version": "2.3.0",
+      "publishedAt": 1743379200000,
+      "changes": "新增 GitHub 备份、云盘备份脚本"
+    },
+    {
+      "version": "2.2.0",
+      "publishedAt": 1743379200000,
+      "changes": "新增数据备份与恢复能力"
+    },
+    {
+      "version": "2.1.0",
+      "publishedAt": 1743292800000,
+      "changes": "简化：规范由 governance-core 统一加载"
+    },
+    {
+      "version": "1.1.1",
+      "publishedAt": 1710734400000,
+      "changes": "门禁前置检查、路径建议"
+    },
+    {
+      "version": "1.0.0",
+      "publishedAt": 1709683200000,
+      "changes": "初始版本"
+    }
+  ]
+}

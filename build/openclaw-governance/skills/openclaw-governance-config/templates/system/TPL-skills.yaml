@@ -1,0 +1,27 @@
+# Skills 注册表模板
+# 复制至 ${OPENCLAW_LOCAL_WORKSPACE}/.system/governance/current/config/system/skills.yaml
+
+# 错误代码定义
+errors:
+  - code: "E_REGISTRY_EMPTY"
+    message: "无可用 Skill 条目"
+  - code: "E_MODE_UNSUPPORTED"
+    message: "运行模式不支持"
+  - code: "E_WHITELIST_BLOCKED"
+    message: "严格白名单阻断"
+  - code: "E_DEP_MISSING"
+    message: "依赖能力缺失"
+  - code: "E_AGENT_UNAVAILABLE"
+    message: "责任 Agent 不可用"
+  - code: "E_FIELD_MISSING"
+    message: "必填字段缺失"
+  - code: "E_PATH_FORBIDDEN"
+    message: "路径不合规"
+  - code: "E_IDEMPOTENT_HIT"
+    message: "重复创建"
+  - code: "E_WRITE_FAIL"
+    message: "写入失败"
+  - code: "E_UNAUTHORIZED"
+    message: "未授权"
+  - code: "E_PROJECT_NOT_FOUND"
+    message: "项目不存在"

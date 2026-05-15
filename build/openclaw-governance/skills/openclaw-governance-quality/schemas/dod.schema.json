@@ -1,0 +1,171 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://openclaw.ai/schemas/dod.schema.json",
+  "title": "Definition of Done (DOD)",
+  "description": "验收标准定义，用于 NUCLEUS 闭环流程的验收环节增强",
+  "type": "object",
+  "required": ["version", "criteria", "metadata"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "DOD 版本号，格式：major.minor",
+      "default": "1.0"
+    },
+    "criteria": {
+      "type": "array",
+      "description": "验收标准列表",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "category", "description", "required", "status"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^DOD-\\d+$",
+            "description": "标准唯一标识，格式：DOD-序号"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["functional", "quality", "documentation", "testing", "security", "performance"],
+            "description": "标准类别"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "标准描述，具体可验证"
+          },
+          "required": {
+            "type": "boolean",
+            "default": true,
+            "description": "是否必须通过"
+          },
+          "status": {
+            "type": "object",
+            "required": ["met"],
+            "properties": {
+              "met": {
+                "type": "boolean",
+                "description": "是否已满足"
+              },
+              "verifier": {
+                "type": "string",
+                "description": "验证人 Agent ID"
+              },
+              "verified_at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "验证时间"
+              },
+              "evidence": {
+                "type": "string",
+                "maxLength": 1000,
+                "description": "验证证据/说明"
+              }
+            }
+          },
+          "automation_level": {
+            "type": "string",
+            "enum": ["L0", "L1", "L2", "L3", "L4", "L5"],
+            "description": "适用的自动化级别，用于分级验证"
+          }
+        }
+      }
+    },
+    "quality_standards": {
+      "type": "array",
+      "description": "质量标准（通用检查项）",
+      "items": {
+        "type": "object",
+        "required": ["id", "description", "checked"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^QS-\\d+$"
+          },
+          "description": {
+            "type": "string"
+          },
+          "checked": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["created_by", "created_at", "locked"],
+      "properties": {
+        "created_by": {
+          "type": "string",
+          "description": "DOD 创建者（通常是 COO 或 Task Planner）"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "创建时间"
+        },
+        "locked": {
+          "type": "boolean",
+          "default": true,
+          "description": "是否锁定（Builder 不可修改）"
+        },
+        "locked_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "锁定时间"
+        },
+        "updated_by": {
+          "type": "string",
+          "description": "最后更新者（只能是 Reviewer 或以上）"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "最后更新时间"
+        },
+        "task_id": {
+          "type": "string",
+          "description": "关联的任务 ID"
+        },
+        "automation_level": {
+          "type": "string",
+          "enum": ["L0", "L1", "L2", "L3", "L4", "L5"],
+          "description": "任务的自动化级别"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "description": "DOD 汇总状态",
+      "properties": {
+        "total_criteria": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "总标准数"
+        },
+        "required_criteria": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "必须标准数"
+        },
+        "met_criteria": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "已满足标准数"
+        },
+        "all_required_met": {
+          "type": "boolean",
+          "description": "所有必须标准是否已满足"
+        },
+        "completion_percentage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "完成百分比"
+        }
+      }
+    }
+  }
+}

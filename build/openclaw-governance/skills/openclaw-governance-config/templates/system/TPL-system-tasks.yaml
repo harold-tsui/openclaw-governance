@@ -1,0 +1,5 @@
+# 系统级任务模板
+# 复制至 ${OPENCLAW_LOCAL_WORKSPACE}/.system/governance/current/config/system/system-tasks.yaml
+
+version: "1.0"
+tasks: []

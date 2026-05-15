@@ -1,0 +1,22 @@
+# 用户级项目模板
+# 复制至 ${OPENCLAW_LOCAL_WORKSPACE}/.system/governance/current/config/user/user-projects.yaml
+
+version: "2.0"
+updated_at: "2026-01-01T00:00:00+08:00"
+
+projects: []
+# 项目结构参考:
+#   - id: "ZT-PXXX"
+#     name: "项目名称"
+#     alias: ["别名1"]
+#     description: "项目描述"
+#     status: "active"
+#     owner: "main"
+#     members: ["main"]
+#     start_date: "2026-01-01"
+#     privacy_level: "P2"
+#     tags: []
+#     source: "manual"
+#     created_at: "2026-01-01T00:00:00+08:00"
+#     updated_at: "2026-01-01T00:00:00+08:00"
+#     created_by: "main"

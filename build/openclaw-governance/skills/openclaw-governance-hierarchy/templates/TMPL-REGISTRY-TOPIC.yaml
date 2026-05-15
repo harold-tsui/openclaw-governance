@@ -1,0 +1,48 @@
+# TMPL-REGISTRY-TOPIC.yaml
+# Topic 注册表模板
+# 用途：.system/master_data/topics.yaml
+# 更新规则：每次 Topic 创建/变更时更新
+
+version: "1.0"
+schema: "registry"
+type: "topic"
+updated_at: "2026-03-17"
+
+# 主题列表
+topics:
+  - # ===== 必填字段 =====
+    id: ""                    # 唯一标识，如 ZT-P009-TP01
+    
+    # ===== 基本信息 =====
+    name: ""                  # 主题名称
+    description: ""           # 主题描述（可选）
+    
+    # ===== 关联项目 =====
+    project_id: ""            # 所属 Project ID
+    project_name: ""          # 所属 Project 名称
+    
+    # ===== 负责人 =====
+    topic_pm: ""              # Topic 负责人 agentId
+    
+    # ===== 状态与级别 =====
+    status: ""                # pending | planning | active | done | paused
+    review_level: ""          # L1 | L2 | L3
+    
+    # ===== 时间信息 =====
+    start_date: ""            # 开始日期 YYYY-MM-DD（可选）
+    end_date: ""              # 结束日期 YYYY-MM-DD（可选）
+    
+    # ===== 分类信息 =====
+    tags: []                  # 标签
+    
+    # ===== 元数据（自动生成）=====
+    source: ""                # 数据来源：manual | task-card | system
+    source_ref: ""            # 来源引用，如 TOPIC-BRIEF.md 路径
+    created_at: ""            # 创建时间 ISO8601
+    updated_at: ""           # 更新时间 ISO8601
+    created_by: ""           # 创建者 agentId
+    
+    # ===== 关联信息 =====
+    brief_path: ""            # TOPIC-BRIEF.md 路径
+    tasks_count: 0           # 子任务数量
+    progress: 0               # 完成进度 0-100%
