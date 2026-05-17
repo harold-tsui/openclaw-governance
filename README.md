@@ -15,7 +15,6 @@ NUCLEUS 4.0 — 徐在红的核心思维引擎架构项目。
 ## 唯一架构文档
 
 > **`docs/NUCLEUS-4-0-ARCHITECTURE.md`** 是 NUCLEUS 4.0 的唯一架构权威源。
-> 需求、架构、详细设计、升级计划四文档已合并为一份。
 
 | 文档 | 路径 | 版本 |
 |------|------|------|
@@ -25,9 +24,9 @@ NUCLEUS 4.0 — 徐在红的核心思维引擎架构项目。
 
 | 组件 | 路径 | 版本 |
 |------|------|------|
-| **PDCA Harness (SKILL.md)** | `skills/openclaw-governance/skills/openclaw-governance-nucleus/SKILL.md` | v2.7.1 |
-| **pdca.py** | `skills/openclaw-governance/skills/openclaw-governance-nucleus/scripts/pdca.py` | v2.7.1 (Phase 锁定 + 幂等性 + 陈旧过滤 + 执行日志) |
-| **scheduler_state.py** | `skills/openclaw-governance/skills/openclaw-governance-nucleus/scripts/scheduler_state.py` | v1.0.0 (Phase 2 新增) |
+| **PDCA Harness (SKILL.md)** | `build/openclaw-governance/skills/openclaw-governance-nucleus/SKILL.md` | v2.7.1 |
+| **pdca.py** | `build/openclaw-governance/skills/openclaw-governance-nucleus/scripts/pdca.py` | v2.7.1 |
+| **scheduler_state.py** | `build/openclaw-governance/skills/openclaw-governance-nucleus/scripts/scheduler_state.py` | v1.0.0 |
 
 ---
 
@@ -35,24 +34,37 @@ NUCLEUS 4.0 — 徐在红的核心思维引擎架构项目。
 
 ```
 ./
-├── docs/
-│   ├── NUCLEUS-4-0-ARCHITECTURE.md   ← 唯一架构权威源
-│   └── archive/                      ← 历史文档归档
-├── config/                           ← 配置文件（scheduler_state.yaml 等）
-├── pdca/                             ← pdca.py 数据存储
-├── cycles/                           ← Phase 1 遗留
-├── logs/                             ← 观测日志
-├── executions/                       ← 执行日志
-├── topics/                           ← Topic 管理
-├── tasks/                            ← Task 管理
-├── scripts/                          ← 可执行脚本
-├── knowledge/                        ← 知识存储（Phase 2）
-├── development/                      ← 开发过程记录
-├── decisions/                        ← 架构决策
-├── reviews/                          ← 评审记录
-├── test/                             ← 测试文件
-├── archived/                         ← Phase 1 归档
-└── README.md                         ← 本文件
+├── src/                    # 开发源码（编辑这里）
+│   ├── pdca.py
+│   ├── scheduler_state.py
+│   ├── dashboard.py
+│   └── migrate_legacy.py
+├── build/                  # 生产 skill 包（git 追踪，不含运行时状态）
+│   └── openclaw-governance/
+├── test/                   # 验证脚本
+│   ├── unit/
+│   ├── integration/
+│   ├── reports/
+│   └── fixtures/
+├── scripts/                # 构建/安装/工具脚本
+│   ├── build-skill.sh
+│   ├── install-skill.sh
+│   ├── pdca_dashboard.py
+│   ├── pdca_analyzer.py
+│   └── pdca_optimizer.py
+├── config/                 # 项目配置
+├── docs/                   # 架构文档（唯一权威源）
+├── decisions/              # 架构决策记录 (ADR)
+├── reviews/                # 代码审查记录
+├── topics/                 # Topic 工作区 (N4-P*-T*)
+├── tasks/                  # Task 卡片
+├── runtime/                # 运行时状态（gitignore，不追踪）
+│   ├── cycles/
+│   ├── logs/
+│   ├── pdca/
+│   └── scheduler_state.yaml
+├── archived/               # Phase 1 归档
+└── README.md               # 本文件
 ```
 
 ## 核心架构
@@ -71,7 +83,7 @@ NUCLEUS 4.0 — 徐在红的核心思维引擎架构项目。
                        │
         ┌──────────────┼──────────────┐
         │              │              │
-    pdca/*.yaml    pdca/*.yaml    pdca/*.yaml
+    runtime/pdca/  runtime/pdca/  runtime/pdca/
     (Task级)       (Topic级)      (Project级)
         │              │              │
         ▼              ▼              ▼
@@ -82,4 +94,4 @@ NUCLEUS 4.0 — 徐在红的核心思维引擎架构项目。
 
 ---
 
-*README v2.1 | 2026-04-18*
+*README v2.2 | 2026-05-17*
