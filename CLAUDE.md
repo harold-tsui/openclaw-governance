@@ -97,11 +97,9 @@ build/openclaw-governance/skills/openclaw-governance-nucleus/
 ├── config/pdca_config.yaml   # Externalized limits/timeouts/concurrency
 └── knowledge/          # Reference docs
 
-runtime/                # Runtime state (gitignore, not tracked)
-├── cycles/             # Cycle records
-├── logs/               # Execution logs (.jsonl + reports)
-├── pdca/               # PDCA YAML state (task files + _state.yaml)
-└── scheduler_state.yaml
+runtime/                # Historical runtime data (gitignore, not tracked)
+├── cycles/             # Legacy cycle records (pre-restructure)
+└── logs/               # Legacy execution logs
 
 test/                   # Informal verification scripts
 ├── unit/
@@ -138,8 +136,8 @@ Plan → Do → CQO Review → Check → Act → (auto aggregate)
 ### Data Model
 
 - Zero-database: all data as `.yaml` / `.md` / `.jsonl` files
-- `runtime/pdca/{task_id}.yaml` — per-task PDCA state with SHA-256 checksum
-- `runtime/pdca/_state.yaml` — aggregated verdicts (auto-derived, never hand-edit)
+- PDCA state lives in the skill's own directory (`build/.../nucleus/pdca/`), resolved by `pdca.py` via `_SKILL_ROOT`
+- Per-task state: `{task_id}.yaml` with SHA-256 checksum; aggregation in `_state.yaml` (auto-derived, never hand-edit)
 - Atomic writes: write `.tmp` then `os.replace()`
 - All `pdca.py` output is JSON
 
