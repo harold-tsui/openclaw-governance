@@ -1,0 +1,19 @@
+# PDCA 默认配置
+limits:
+  max_files: 500
+  max_file_size_kb: 1024
+  max_cycles_per_task: 50
+
+timeouts:
+  pending_warning_hours: 24
+  pending_critical_hours: 72
+  cqo_review_minutes: 5
+
+concurrency:
+  task_max: 10
+  topic_max: 5
+  project_max: 3
+
+aggregate:
+  mode: strict  # strict | weighted
+  auto_trigger_after_act: true
