@@ -4,7 +4,14 @@ set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="$PROJECT_DIR/build/openclaw-governance"
-TARGET="${LOCAL_WORKSPACE:-$HOME/Workspaces/openclaw/main}/skills"
+# 检测并设置目标目录
+if [ -n "${LOCAL_WORKSPACE:-}" ]; then
+    TARGET="$LOCAL_WORKSPACE/skills"
+elif [ -d "$HOME/.openclaw/workspace" ]; then
+    TARGET="$HOME/.openclaw/workspace/skills"
+else
+    TARGET="$HOME/Workspaces/openclaw/main/skills"
+fi
 
 MODE="${1:---stable}"
 
@@ -15,9 +22,16 @@ fi
 
 echo "📦 Installing openclaw-governance → $TARGET/"
 
+# 确保目标目录存在
+mkdir -p "$TARGET"
+
 # Remove old installation and copy new
 rm -rf "$TARGET/openclaw-governance"
 cp -r "$BUILD_DIR" "$TARGET/openclaw-governance"
+
+# 确保运行时目录存在
+mkdir -p "$TARGET/openclaw-governance/pdca"
+mkdir -p "$TARGET/openclaw-governance/logs"
 
 # Verify
 if [ -f "$TARGET/openclaw-governance/SKILL.md" ]; then

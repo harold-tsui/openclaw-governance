@@ -1,0 +1,7 @@
+# openclaw-governance dependencies
+PyYAML>=6.0
+jsonschema>=4.0.0
+
+# Development / Testing
+pytest>=8.0
+pytest-cov>=5.0

@@ -1695,9 +1695,12 @@ def health_check() -> Dict[str, Any]:
 
     # 文件统计
     if not os.path.exists(PDCA_DIR):
-        checks['pdca_dir'] = 'missing'
-        checks['status'] = 'degraded'
-        return checks
+        os.makedirs(PDCA_DIR, exist_ok=True)
+        # 创建后重新检查
+        if not os.path.exists(PDCA_DIR):
+            checks['pdca_dir'] = 'missing'
+            checks['status'] = 'degraded'
+            return checks
 
     files = [f for f in os.listdir(PDCA_DIR)
              if f.endswith('.yaml') and not f.startswith('_')]
