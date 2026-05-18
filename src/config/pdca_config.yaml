@@ -1,19 +1,31 @@
-# PDCA 默认配置
-limits:
-  max_files: 500
-  max_file_size_kb: 1024
-  max_cycles_per_task: 50
+# PDCA 外部化配置
+# key 必须与 pdca.py _load_config() 的 defaults dict 完全一致才能正确覆盖
 
-timeouts:
-  pending_warning_hours: 24
-  pending_critical_hours: 72
-  cqo_review_minutes: 5
+adas:
+  levels_self_approve: [L0, L1]
+  level_full_human: L3
 
 concurrency:
-  task_max: 10
-  topic_max: 5
-  project_max: 3
+  task: 10
+  topic: 5
+  project: 3
 
-aggregate:
-  mode: strict  # strict | weighted
-  auto_trigger_after_act: true
+audit:
+  score_threshold: 80
+
+pending_timeout:
+  warning_days: 7
+  critical_days: 14
+
+weighted_aggregate:
+  pass_threshold: 0.80
+  fail_threshold: 0.20
+
+limits:
+  max_yaml_size_kb: 1024
+  archive_older_than_days: 30
+  max_pdca_files: 500
+  max_cycles_per_task: 20
+
+timeouts:
+  cqo_review_minutes: 5
